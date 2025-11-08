@@ -65,20 +65,35 @@ export const EmployeeProfile = {
     if (rows[0]) {
       // Parse JSON fields
       const profile = rows[0];
+
+      // Parse skills
       if (profile.skills) {
         try {
-          profile.skills = JSON.parse(profile.skills);
+          if (typeof profile.skills === "string") {
+            profile.skills = JSON.parse(profile.skills);
+          }
+          if (!Array.isArray(profile.skills)) {
+            profile.skills = [];
+          }
         } catch (e) {
+          console.error("Error parsing skills:", e);
           profile.skills = [];
         }
       } else {
         profile.skills = [];
       }
 
+      // Parse certifications
       if (profile.certifications) {
         try {
-          profile.certifications = JSON.parse(profile.certifications);
+          if (typeof profile.certifications === "string") {
+            profile.certifications = JSON.parse(profile.certifications);
+          }
+          if (!Array.isArray(profile.certifications)) {
+            profile.certifications = [];
+          }
         } catch (e) {
+          console.error("Error parsing certifications:", e);
           profile.certifications = [];
         }
       } else {
@@ -98,16 +113,43 @@ export const EmployeeProfile = {
       const processedData = { ...profileData };
 
       // Convert arrays to JSON strings for skills and certifications
-      if (processedData.skills && Array.isArray(processedData.skills)) {
-        processedData.skills = JSON.stringify(processedData.skills);
+      if (processedData.skills !== undefined) {
+        if (Array.isArray(processedData.skills)) {
+          processedData.skills = JSON.stringify(processedData.skills);
+          console.log("Saving skills:", processedData.skills);
+        } else if (typeof processedData.skills === "string") {
+          // Already a string, but verify it's valid JSON
+          try {
+            JSON.parse(processedData.skills);
+          } catch (e) {
+            console.error("Invalid skills JSON string:", processedData.skills);
+            processedData.skills = JSON.stringify([]);
+          }
+        } else {
+          processedData.skills = JSON.stringify([]);
+        }
       }
-      if (
-        processedData.certifications &&
-        Array.isArray(processedData.certifications)
-      ) {
-        processedData.certifications = JSON.stringify(
-          processedData.certifications
-        );
+
+      if (processedData.certifications !== undefined) {
+        if (Array.isArray(processedData.certifications)) {
+          processedData.certifications = JSON.stringify(
+            processedData.certifications
+          );
+          console.log("Saving certifications:", processedData.certifications);
+        } else if (typeof processedData.certifications === "string") {
+          // Already a string, but verify it's valid JSON
+          try {
+            JSON.parse(processedData.certifications);
+          } catch (e) {
+            console.error(
+              "Invalid certifications JSON string:",
+              processedData.certifications
+            );
+            processedData.certifications = JSON.stringify([]);
+          }
+        } else {
+          processedData.certifications = JSON.stringify([]);
+        }
       }
 
       // Check if profile exists
@@ -129,10 +171,15 @@ export const EmployeeProfile = {
         .join(", ");
       const values = [...Object.values(processedData), userId];
 
+      console.log("Updating profile with fields:", fields);
+      console.log("Values:", values);
+
       await pool.query(
         `UPDATE employee_profiles SET ${fields} WHERE user_id = ?`,
         values
       );
+
+      console.log("Profile updated successfully for user:", userId);
     } catch (error) {
       console.error("Error updating profile:", error);
       throw error;

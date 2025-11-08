@@ -57,22 +57,25 @@ ON DUPLICATE KEY UPDATE user_id = user_id;
 -- Create a view to show leave requests with employee details
 CREATE OR REPLACE VIEW leave_requests_view AS
 SELECT 
-    lr.request_id,
+    lr.id,
     lr.user_id,
-    COALESCE(lr.employee_name, CONCAT(ep.first_name, ' ', COALESCE(ep.last_name, ''))) as employee_name,
+    CONCAT(COALESCE(ep.first_name, ''), ' ', COALESCE(ep.last_name, '')) as employee_name,
+    CONCAT(COALESCE(ep.first_name, ''), ' ', COALESCE(ep.last_name, '')) as full_name,
+    u.email,
     ep.employee_code,
     ep.department,
     lr.start_date,
     lr.end_date,
     lr.leave_type,
-    lr.total_days,
+    lr.days_requested,
     lr.reason,
     lr.status,
     lr.reviewed_by,
     lr.reviewed_at,
     lr.created_at,
-    CONCAT(rev_ep.first_name, ' ', COALESCE(rev_ep.last_name, '')) as reviewed_by_name
+    CONCAT(COALESCE(rev_ep.first_name, ''), ' ', COALESCE(rev_ep.last_name, '')) as reviewed_by_name
 FROM leave_requests lr
+LEFT JOIN users u ON lr.user_id = u.user_id
 LEFT JOIN employee_profiles ep ON lr.user_id = ep.user_id
 LEFT JOIN users rev_u ON lr.reviewed_by = rev_u.user_id
 LEFT JOIN employee_profiles rev_ep ON rev_u.user_id = rev_ep.user_id;

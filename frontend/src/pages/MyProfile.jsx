@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import Sidebar from "../components/Sidebar";
+import Header from "../components/Header";
 import "../styles/MyProfile.css";
 
 const MyProfile = () => {
@@ -59,6 +61,39 @@ const MyProfile = () => {
       const response = await api.get(`/users/profile/${user.userId}`);
       setProfileData(response.data.data);
 
+      console.log("Fetched profile data:", response.data.data);
+
+      // Parse skills and certifications - handle both array and string formats
+      let skills = response.data.data.profile?.skills || [];
+      let certifications = response.data.data.profile?.certifications || [];
+
+      // If skills is a string, try to parse it
+      if (typeof skills === "string") {
+        try {
+          skills = JSON.parse(skills);
+        } catch (e) {
+          console.error("Error parsing skills:", e);
+          skills = [];
+        }
+      }
+
+      // If certifications is a string, try to parse it
+      if (typeof certifications === "string") {
+        try {
+          certifications = JSON.parse(certifications);
+        } catch (e) {
+          console.error("Error parsing certifications:", e);
+          certifications = [];
+        }
+      }
+
+      // Ensure they are arrays
+      if (!Array.isArray(skills)) skills = [];
+      if (!Array.isArray(certifications)) certifications = [];
+
+      console.log("Parsed skills:", skills);
+      console.log("Parsed certifications:", certifications);
+
       // Initialize form data with existing data or defaults
       // Backend returns snake_case, convert to camelCase for frontend
       setFormData({
@@ -71,8 +106,8 @@ const MyProfile = () => {
         interests:
           response.data.data.profile?.interests ||
           "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.",
-        skills: response.data.data.profile?.skills || [],
-        certifications: response.data.data.profile?.certifications || [],
+        skills: skills,
+        certifications: certifications,
         companyName: response.data.data.profile?.company_name || "",
         department: response.data.data.profile?.department || "",
         manager: response.data.data.profile?.manager || "",
@@ -126,25 +161,42 @@ const MyProfile = () => {
 
   const handleSave = async () => {
     try {
+      // Ensure skills and certifications are arrays
+      const skills = Array.isArray(formData.skills) ? formData.skills : [];
+      const certifications = Array.isArray(formData.certifications)
+        ? formData.certifications
+        : [];
+
+      console.log("Saving profile with skills:", skills);
+      console.log("Saving profile with certifications:", certifications);
+
       // Convert camelCase to snake_case for backend
       const dataToSend = {
         about: formData.about,
         what_i_love: formData.whatILove,
         interests: formData.interests,
-        skills: formData.skills,
-        certifications: formData.certifications,
+        skills: skills,
+        certifications: certifications,
         company_name: formData.companyName,
         department: formData.department,
         manager: formData.manager,
         city: formData.location,
       };
 
-      await api.put(`/users/profile/${user.userId}`, dataToSend);
+      console.log("Data being sent to backend:", dataToSend);
+
+      const response = await api.put(
+        `/users/profile/${user.userId}`,
+        dataToSend
+      );
+      console.log("Profile update response:", response.data);
+
       setEditMode(false);
-      fetchProfileData();
+      await fetchProfileData();
       alert("Profile updated successfully!");
     } catch (error) {
       console.error("Error saving profile:", error);
+      console.error("Error response:", error.response?.data);
       alert(
         `Error saving profile: ${
           error.response?.data?.message || error.message
@@ -274,7 +326,7 @@ const MyProfile = () => {
 
       // Clear any previous errors
       setPasswordErrors({});
-      
+
       setPasswordSuccess(
         response.data.message ||
           "Password updated successfully! A confirmation email has been sent."
@@ -1285,7 +1337,10 @@ const MyProfile = () => {
               {user?.role === "Admin" && (
                 <div className="admin-password-section">
                   <h4>Admin Note</h4>
-                  <p className="admin-note">Password reset via verification code is available for all users.</p>
+                  <p className="admin-note">
+                    Password reset via verification code is available for all
+                    users.
+                  </p>
                 </div>
               )}
             </div>

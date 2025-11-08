@@ -1,19 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
-import '../styles/App.css';
-import '../styles/Reports.css';
+import React, { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
+import api from "../services/api";
+import html2pdf from "html2pdf.js";
+import Sidebar from "../components/Sidebar";
+import Header from "../components/Header";
+import "../styles/App.css";
+import "../styles/Reports.css";
 
 const Reports = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState('reports');
-  const [reportType, setReportType] = useState('salary-statement');
-  
+  const [activeSection, setActiveSection] = useState("reports");
+  const [reportType, setReportType] = useState("salary-statement");
+
   // Salary Statement Report State
   const [employees, setEmployees] = useState([]);
-  const [selectedEmployee, setSelectedEmployee] = useState('');
+  const [selectedEmployee, setSelectedEmployee] = useState("");
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -21,12 +24,13 @@ const Reports = () => {
   const [showReport, setShowReport] = useState(false);
 
   // Check if user has access to Reports
-  const hasReportAccess = user?.role === 'Admin' || user?.role === 'Payroll Officer';
+  const hasReportAccess =
+    user?.role === "Admin" || user?.role === "Payroll Officer";
 
   // Redirect if user doesn't have access
   useEffect(() => {
     if (!hasReportAccess) {
-      navigate('/unauthorized');
+      navigate("/unauthorized");
     }
   }, [hasReportAccess, navigate]);
 
@@ -37,26 +41,25 @@ const Reports = () => {
 
   const fetchEmployees = async () => {
     try {
-      const token = localStorage.getItem('workzen_token');
-      const response = await api.get('/users', {
+      const token = localStorage.getItem("workzen_token");
+      const response = await api.get("/users", {
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
       setEmployees(response.data.data || []);
     } catch (error) {
-      console.error('Error fetching employees:', error);
-      setError('Failed to load employees');
+      console.error("Error fetching employees:", error);
+      setError("Failed to load employees");
     }
   };
 
   const navItems = [
-    { id: 'employees', label: 'Employees', path: '/dashboard' },
-    { id: 'attendance', label: 'Attendance', path: '/attendance' },
-    { id: 'timeoff', label: 'Time Off', path: null },
-    { id: 'payroll', label: 'Payroll', path: null },
-    { id: 'reports', label: 'Reports', path: '/reports' },
-    { id: 'settings', label: 'Settings', path: null },
+    { id: "employees", label: "Employees", path: "/dashboard" },
+    { id: "attendance", label: "Attendance", path: "/attendance" },
+    { id: "timeoff", label: "Time Off", path: null },
+    { id: "payroll", label: "Payroll", path: null },
+    { id: "reports", label: "Reports", path: "/reports" },
   ];
 
   const handleNavClick = (item) => {
@@ -69,17 +72,17 @@ const Reports = () => {
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   const handleGenerateReport = async () => {
     if (!selectedEmployee) {
-      setError('Please select an employee');
+      setError("Please select an employee");
       return;
     }
 
     if (!selectedYear) {
-      setError('Please select a year');
+      setError("Please select a year");
       return;
     }
 
@@ -96,8 +99,8 @@ const Reports = () => {
       setReportData(response.data.data);
       setShowReport(true);
     } catch (err) {
-      console.error('Error generating report:', err);
-      setError(err.response?.data?.message || 'Failed to generate report');
+      console.error("Error generating report:", err);
+      setError(err.response?.data?.message || "Failed to generate report");
     } finally {
       setLoading(false);
     }
@@ -105,23 +108,47 @@ const Reports = () => {
 
   const handleDownloadPDF = () => {
     if (!reportData) return;
-    
-    const employee = employees.find(e => e.user_id == selectedEmployee);
-    const companyName = user?.profile?.company_name || 'Company Name';
-    
-    const htmlContent = generateReportHTML(employee, companyName, reportData);
 
-    // Create a blob and download
-    const blob = new Blob([htmlContent], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `Salary_Statement_${employee?.full_name || 'Employee'}_${selectedYear}.html`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const employee = employees.find((e) => e.user_id == selectedEmployee);
+
+    // Get the report display element that's already rendered on the page
+    const reportElement = document.querySelector(".report-display");
+
+    if (!reportElement) {
+      alert("Please generate the report first before downloading.");
+      return;
+    }
+
+    // Configure PDF options
+    const opt = {
+      margin: [10, 10, 10, 10],
+      filename: `Salary_Statement_${
+        employee?.full_name || "Employee"
+      }_${selectedYear}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#000000",
+      },
+      jsPDF: {
+        unit: "mm",
+        format: "a4",
+        orientation: "portrait",
+        compress: true,
+      },
+    };
+
+    // Generate PDF from the existing DOM element
+    html2pdf()
+      .set(opt)
+      .from(reportElement)
+      .save()
+      .catch((error) => {
+        console.error("Error generating PDF:", error);
+        alert("Error generating PDF. Please try again.");
+      });
   };
 
   const generateReportHTML = (employee, companyName, data) => {
@@ -301,21 +328,29 @@ const Reports = () => {
             <div class="detail-group">
               <div class="detail-row">
                 <div class="detail-label">Employee Name</div>
-                <div class="detail-value">${employee?.full_name || 'N/A'}</div>
+                <div class="detail-value">${employee?.full_name || "N/A"}</div>
               </div>
               <div class="detail-row">
                 <div class="detail-label">Designation</div>
-                <div class="detail-value">${employee?.role_name || 'N/A'}</div>
+                <div class="detail-value">${employee?.role_name || "N/A"}</div>
               </div>
             </div>
             <div class="detail-group">
               <div class="detail-row">
                 <div class="detail-label">Date Of Joining</div>
-                <div class="detail-value">${employee?.created_at ? new Date(employee.created_at).toLocaleDateString('en-IN') : 'N/A'}</div>
+                <div class="detail-value">${
+                  employee?.created_at
+                    ? new Date(employee.created_at).toLocaleDateString("en-IN")
+                    : "N/A"
+                }</div>
               </div>
               <div class="detail-row">
                 <div class="detail-label">Salary Effective From</div>
-                <div class="detail-value">${employee?.created_at ? new Date(employee.created_at).toLocaleDateString('en-IN') : 'N/A'}</div>
+                <div class="detail-value">${
+                  employee?.created_at
+                    ? new Date(employee.created_at).toLocaleDateString("en-IN")
+                    : "N/A"
+                }</div>
               </div>
             </div>
           </div>
@@ -335,16 +370,24 @@ const Reports = () => {
               <div class="section-title">Earnings</div>
             </div>
             
-            ${data && data.length > 0 ? `
+            ${
+              data && data.length > 0
+                ? `
               <div class="component-row">
                 <div>Basic</div>
-                <div>₹ ${parseFloat(data[0]?.basic_salary || 0).toFixed(0)}</div>
-                <div>₹ ${(parseFloat(data[0]?.basic_salary || 0) * 12).toFixed(0)}</div>
+                <div>₹ ${parseFloat(data[0]?.basic_salary || 0).toFixed(
+                  0
+                )}</div>
+                <div>₹ ${(parseFloat(data[0]?.basic_salary || 0) * 12).toFixed(
+                  0
+                )}</div>
               </div>
               <div class="component-row">
                 <div>HRA</div>
                 <div>₹ ${parseFloat(data[0]?.allowances || 0).toFixed(0)}</div>
-                <div>₹ ${(parseFloat(data[0]?.allowances || 0) * 12).toFixed(0)}</div>
+                <div>₹ ${(parseFloat(data[0]?.allowances || 0) * 12).toFixed(
+                  0
+                )}</div>
               </div>
               <div class="component-row">
                 <div>:</div>
@@ -356,23 +399,29 @@ const Reports = () => {
                 <div>:</div>
                 <div>:</div>
               </div>
-            ` : `
+            `
+                : `
               <div class="component-row">
                 <div>Basic</div>
                 <div>₹ 0</div>
                 <div>₹ 0</div>
               </div>
-            `}
+            `
+            }
             
             <div class="section-header" style="margin-top: 20px;">
               <div class="section-title">Deduction</div>
             </div>
             
-            ${data && data.length > 0 ? `
+            ${
+              data && data.length > 0
+                ? `
               <div class="component-row">
                 <div>PF</div>
                 <div>₹ ${parseFloat(data[0]?.deductions || 0).toFixed(0)}</div>
-                <div>₹ ${(parseFloat(data[0]?.deductions || 0) * 12).toFixed(0)}</div>
+                <div>₹ ${(parseFloat(data[0]?.deductions || 0) * 12).toFixed(
+                  0
+                )}</div>
               </div>
               <div class="component-row">
                 <div>:</div>
@@ -384,19 +433,29 @@ const Reports = () => {
                 <div>:</div>
                 <div>:</div>
               </div>
-            ` : `
+            `
+                : `
               <div class="component-row">
                 <div>PF</div>
                 <div>₹ 0</div>
                 <div>₹ 0</div>
               </div>
-            `}
+            `
+            }
             
             <div class="net-salary">
               <div class="net-salary-row">
                 <div>Net Salary</div>
-                <div>₹ ${data && data.length > 0 ? parseFloat(data[0]?.net_salary || 0).toFixed(0) : '0'}</div>
-                <div>₹ ${data && data.length > 0 ? (parseFloat(data[0]?.net_salary || 0) * 12).toFixed(0) : '0'}</div>
+                <div>₹ ${
+                  data && data.length > 0
+                    ? parseFloat(data[0]?.net_salary || 0).toFixed(0)
+                    : "0"
+                }</div>
+                <div>₹ ${
+                  data && data.length > 0
+                    ? (parseFloat(data[0]?.net_salary || 0) * 12).toFixed(0)
+                    : "0"
+                }</div>
               </div>
             </div>
           </div>
@@ -423,43 +482,11 @@ const Reports = () => {
 
   return (
     <div className="dashboard-layout">
-      {/* Left Sidebar Navigation */}
-      <aside className="dashboard-sidebar">
-        <div className="sidebar-header">
-          <div className="sidebar-company">
-            <img 
-              src="/odoo-logo.svg" 
-              alt="Company Logo" 
-              className="sidebar-logo"
-            />
-            <span className="company-name">{user?.profile?.company_name || 'Odoo India'}</span>
-          </div>
-        </div>
-
-        <nav className="sidebar-nav">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              className={`nav-item ${activeSection === item.id ? 'active' : ''}`}
-              onClick={() => handleNavClick(item)}
-            >
-              <span>{item.label}</span>
-            </button>
-          ))}
-        </nav>
-      </aside>
+      <Sidebar activeSection="reports" />
 
       {/* Main Content */}
       <main className="dashboard-main">
-        {/* Top Header */}
-        <header className="dashboard-header">
-          <div className="header-left">
-            <h2 className="page-title">Reports</h2>
-          </div>
-          <div className="header-right">
-            <button className="btn-logout" onClick={handleLogout}>Logout</button>
-          </div>
-        </header>
+        <Header title="Reports" />
 
         {/* Reports Content */}
         <div className="reports-container">
@@ -468,12 +495,12 @@ const Reports = () => {
               <div className="report-title-section">
                 <h2 className="report-name">Salary Statement Report</h2>
               </div>
-              <button 
-                className="btn-print" 
+              <button
+                className="btn-print"
                 onClick={handleGenerateReport}
                 disabled={loading || !selectedEmployee || !selectedYear}
               >
-                {loading ? 'Generating...' : 'Print'}
+                {loading ? "Generating..." : "Print"}
               </button>
             </div>
 
@@ -487,7 +514,7 @@ const Reports = () => {
 
               <div className="form-group">
                 <label htmlFor="employee-select">Employee Name :</label>
-                <select 
+                <select
                   id="employee-select"
                   className="form-select"
                   value={selectedEmployee}
@@ -499,7 +526,8 @@ const Reports = () => {
                   <option value=""></option>
                   {employees.map((emp) => (
                     <option key={emp.user_id} value={emp.user_id}>
-                      {emp.full_name || emp.email} {emp.employee_code ? `(${emp.employee_code})` : ''}
+                      {emp.full_name || emp.email}{" "}
+                      {emp.employee_code ? `(${emp.employee_code})` : ""}
                     </option>
                   ))}
                 </select>
@@ -507,7 +535,7 @@ const Reports = () => {
 
               <div className="form-group">
                 <label htmlFor="year-select">Year</label>
-                <select 
+                <select
                   id="year-select"
                   className="form-select"
                   value={selectedYear}
@@ -531,76 +559,149 @@ const Reports = () => {
             <div className="report-display">
               <div className="report-content">
                 <div className="report-print-header">
-                  <h1 style={{color: '#5dade2', textAlign: 'center', fontSize: '28px', marginBottom: '20px', paddingBottom: '20px', borderBottom: '2px solid #fff'}}>
+                  <h1
+                    style={{
+                      color: "#5dade2",
+                      textAlign: "center",
+                      fontSize: "28px",
+                      marginBottom: "20px",
+                      paddingBottom: "20px",
+                      borderBottom: "2px solid #fff",
+                    }}
+                  >
                     Salary Statement Report Print
                   </h1>
                 </div>
-                
-                <div style={{color: '#ff4444', fontSize: '18px', marginBottom: '20px'}}>
-                  [{user?.profile?.company_name || 'kitsw'}]
+
+                <div
+                  style={{
+                    color: "#ff4444",
+                    fontSize: "18px",
+                    marginBottom: "20px",
+                  }}
+                >
+                  [{user?.profile?.company_name || "kitsw"}]
                 </div>
-                
-                <div style={{color: '#ff4444', fontSize: '20px', marginBottom: '25px'}}>
+
+                <div
+                  style={{
+                    color: "#ff4444",
+                    fontSize: "20px",
+                    marginBottom: "25px",
+                  }}
+                >
                   Salary Statement Report
                 </div>
-                
+
                 <div className="employee-details-grid">
                   <div className="detail-column">
                     <div className="detail-item">
                       <span className="detail-label">Employee Name</span>
-                      <span className="detail-value">{employees.find(e => e.user_id == selectedEmployee)?.full_name || 'N/A'}</span>
+                      <span className="detail-value">
+                        {employees.find((e) => e.user_id == selectedEmployee)
+                          ?.full_name || "N/A"}
+                      </span>
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">Designation</span>
-                      <span className="detail-value">{employees.find(e => e.user_id == selectedEmployee)?.role_name || 'N/A'}</span>
+                      <span className="detail-value">
+                        {employees.find((e) => e.user_id == selectedEmployee)
+                          ?.role_name || "N/A"}
+                      </span>
                     </div>
                   </div>
                   <div className="detail-column">
                     <div className="detail-item">
                       <span className="detail-label">Date Of Joining</span>
                       <span className="detail-value">
-                        {employees.find(e => e.user_id == selectedEmployee)?.created_at 
-                          ? new Date(employees.find(e => e.user_id == selectedEmployee).created_at).toLocaleDateString('en-IN') 
-                          : 'N/A'}
+                        {employees.find((e) => e.user_id == selectedEmployee)
+                          ?.created_at
+                          ? new Date(
+                              employees.find(
+                                (e) => e.user_id == selectedEmployee
+                              ).created_at
+                            ).toLocaleDateString("en-IN")
+                          : "N/A"}
                       </span>
                     </div>
                     <div className="detail-item">
-                      <span className="detail-label">Salary Effective From</span>
+                      <span className="detail-label">
+                        Salary Effective From
+                      </span>
                       <span className="detail-value">
-                        {employees.find(e => e.user_id == selectedEmployee)?.created_at 
-                          ? new Date(employees.find(e => e.user_id == selectedEmployee).created_at).toLocaleDateString('en-IN') 
-                          : 'N/A'}
+                        {employees.find((e) => e.user_id == selectedEmployee)
+                          ?.created_at
+                          ? new Date(
+                              employees.find(
+                                (e) => e.user_id == selectedEmployee
+                              ).created_at
+                            ).toLocaleDateString("en-IN")
+                          : "N/A"}
                       </span>
                     </div>
                   </div>
                 </div>
 
                 <div className="salary-components-section">
-                  <h3 style={{color: '#ff4444', fontSize: '18px', marginBottom: '15px', marginTop: '30px'}}>
+                  <h3
+                    style={{
+                      color: "#ff4444",
+                      fontSize: "18px",
+                      marginBottom: "15px",
+                      marginTop: "30px",
+                    }}
+                  >
                     Salary Components
                   </h3>
-                  
+
                   <div className="components-table-header">
                     <div></div>
-                    <div style={{color: '#5dade2'}}>Monthly Amount</div>
-                    <div style={{color: '#5dade2'}}>Yearly Amount</div>
+                    <div style={{ color: "#5dade2" }}>Monthly Amount</div>
+                    <div style={{ color: "#5dade2" }}>Yearly Amount</div>
                   </div>
 
-                  <h4 style={{color: '#ff4444', fontSize: '18px', marginTop: '20px', marginBottom: '10px'}}>
+                  <h4
+                    style={{
+                      color: "#ff4444",
+                      fontSize: "18px",
+                      marginTop: "20px",
+                      marginBottom: "10px",
+                    }}
+                  >
                     Earnings
                   </h4>
-                  
+
                   {reportData && reportData.length > 0 ? (
                     <>
                       <div className="component-row">
                         <div>Basic</div>
-                        <div>₹ {parseFloat(reportData[0]?.basic_salary || 0).toFixed(0)}</div>
-                        <div>₹ {(parseFloat(reportData[0]?.basic_salary || 0) * 12).toFixed(0)}</div>
+                        <div>
+                          ₹{" "}
+                          {parseFloat(reportData[0]?.basic_salary || 0).toFixed(
+                            0
+                          )}
+                        </div>
+                        <div>
+                          ₹{" "}
+                          {(
+                            parseFloat(reportData[0]?.basic_salary || 0) * 12
+                          ).toFixed(0)}
+                        </div>
                       </div>
                       <div className="component-row">
                         <div>HRA</div>
-                        <div>₹ {parseFloat(reportData[0]?.allowances || 0).toFixed(0)}</div>
-                        <div>₹ {(parseFloat(reportData[0]?.allowances || 0) * 12).toFixed(0)}</div>
+                        <div>
+                          ₹{" "}
+                          {parseFloat(reportData[0]?.allowances || 0).toFixed(
+                            0
+                          )}
+                        </div>
+                        <div>
+                          ₹{" "}
+                          {(
+                            parseFloat(reportData[0]?.allowances || 0) * 12
+                          ).toFixed(0)}
+                        </div>
                       </div>
                       <div className="component-row">
                         <div>:</div>
@@ -621,16 +722,33 @@ const Reports = () => {
                     </div>
                   )}
 
-                  <h4 style={{color: '#ff4444', fontSize: '18px', marginTop: '20px', marginBottom: '10px'}}>
+                  <h4
+                    style={{
+                      color: "#ff4444",
+                      fontSize: "18px",
+                      marginTop: "20px",
+                      marginBottom: "10px",
+                    }}
+                  >
                     Deduction
                   </h4>
-                  
+
                   {reportData && reportData.length > 0 ? (
                     <>
                       <div className="component-row">
                         <div>PF</div>
-                        <div>₹ {parseFloat(reportData[0]?.deductions || 0).toFixed(0)}</div>
-                        <div>₹ {(parseFloat(reportData[0]?.deductions || 0) * 12).toFixed(0)}</div>
+                        <div>
+                          ₹{" "}
+                          {parseFloat(reportData[0]?.deductions || 0).toFixed(
+                            0
+                          )}
+                        </div>
+                        <div>
+                          ₹{" "}
+                          {(
+                            parseFloat(reportData[0]?.deductions || 0) * 12
+                          ).toFixed(0)}
+                        </div>
                       </div>
                       <div className="component-row">
                         <div>:</div>
@@ -651,19 +769,45 @@ const Reports = () => {
                     </div>
                   )}
 
-                  <div className="net-salary-row" style={{marginTop: '30px', paddingTop: '15px', borderTop: '2px solid #fff'}}>
-                    <div style={{color: '#ff4444', fontWeight: '700', fontSize: '16px'}}>Net Salary</div>
-                    <div style={{fontWeight: '700', fontSize: '16px'}}>
-                      ₹ {reportData && reportData.length > 0 ? parseFloat(reportData[0]?.net_salary || 0).toFixed(0) : '0'}
+                  <div
+                    className="net-salary-row"
+                    style={{
+                      marginTop: "30px",
+                      paddingTop: "15px",
+                      borderTop: "2px solid #fff",
+                    }}
+                  >
+                    <div
+                      style={{
+                        color: "#ff4444",
+                        fontWeight: "700",
+                        fontSize: "16px",
+                      }}
+                    >
+                      Net Salary
                     </div>
-                    <div style={{fontWeight: '700', fontSize: '16px'}}>
-                      ₹ {reportData && reportData.length > 0 ? (parseFloat(reportData[0]?.net_salary || 0) * 12).toFixed(0) : '0'}
+                    <div style={{ fontWeight: "700", fontSize: "16px" }}>
+                      ₹{" "}
+                      {reportData && reportData.length > 0
+                        ? parseFloat(reportData[0]?.net_salary || 0).toFixed(0)
+                        : "0"}
+                    </div>
+                    <div style={{ fontWeight: "700", fontSize: "16px" }}>
+                      ₹{" "}
+                      {reportData && reportData.length > 0
+                        ? (
+                            parseFloat(reportData[0]?.net_salary || 0) * 12
+                          ).toFixed(0)
+                        : "0"}
                     </div>
                   </div>
                 </div>
 
                 <div className="report-actions">
-                  <button className="btn-download-pdf" onClick={handleDownloadPDF}>
+                  <button
+                    className="btn-download-pdf"
+                    onClick={handleDownloadPDF}
+                  >
                     Download as PDF
                   </button>
                 </div>

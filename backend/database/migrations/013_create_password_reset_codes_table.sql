@@ -1,6 +1,6 @@
 -- Create password_reset_codes table for password reset functionality
 CREATE TABLE IF NOT EXISTS password_reset_codes (
-  reset_id INT PRIMARY KEY AUTO_INCREMENT,
+  id INT PRIMARY KEY AUTO_INCREMENT,
   user_id INT NOT NULL,
   reset_code VARCHAR(6) NOT NULL,
   is_used BOOLEAN DEFAULT FALSE,

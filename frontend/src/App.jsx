@@ -8,7 +8,6 @@ import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AttendanceRouter from "./components/AttendanceRouter";
 import SignIn from "./pages/SignIn";
-import SignUp from "./pages/SignUp";
 import Dashboard from "./pages/Dashboard";
 import MyProfile from "./pages/MyProfile";
 import Attendance from "./pages/Attendance";
@@ -28,15 +27,12 @@ function App() {
             {/* Public Routes */}
             <Route path="/" element={<Navigate to="/payroll" />} />
             <Route path="/login" element={<SignIn />} />
-            <Route path="/signup" element={<SignUp />} />
 
             {/* Protected Routes */}
             <Route
               path="/dashboard"
               element={
-                <ProtectedRoute
-                  allowedRoles={["Admin", "HR Officer", "Payroll Officer"]}
-                >
+                <ProtectedRoute>
                   <Dashboard />
                 </ProtectedRoute>
               }
@@ -75,9 +71,7 @@ function App() {
             <Route
               path="/reports"
               element={
-                <ProtectedRoute
-                  allowedRoles={["Admin", "Payroll Officer"]}
-                >
+                <ProtectedRoute allowedRoles={["Admin", "Payroll Officer"]}>
                   <Reports />
                 </ProtectedRoute>
               }
@@ -95,7 +89,7 @@ function App() {
 
             {/* Payroll Page - Standalone (No protection for demo) */}
             <Route path="/payroll" element={<PayrollPage />} />
-            
+
             {/* Payrun Dashboard - Functional Payrun System */}
             <Route path="/payrun" element={<PayrunDashboard />} />
 

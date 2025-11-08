@@ -8,6 +8,7 @@ import {
   allocateLeave,
   getEmployeesWithBalances,
   getAllocationHistory,
+  getActiveLeaves,
 } from "../controllers/leaveController.js";
 import { protect } from "../middleware/auth.js";
 
@@ -50,6 +51,11 @@ router.get("/employees", getEmployeesWithBalances);
 // @desc    Get allocation history
 // @access  Private
 router.get("/allocations", getAllocationHistory);
+
+// @route   GET /api/leave/active-leaves
+// @desc    Get employees currently on approved leave
+// @access  Private
+router.get("/active-leaves", getActiveLeaves);
 
 // @route   DELETE /api/leave/request/:id
 // @desc    Delete a leave request (only pending)

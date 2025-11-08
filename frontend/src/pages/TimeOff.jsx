@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import Sidebar from "../components/Sidebar";
+import Header from "../components/Header";
 import "../styles/TimeOff.css";
 
 const TimeOff = () => {
@@ -256,34 +259,12 @@ const TimeOff = () => {
   };
 
   return (
-    <div className="timeoff-container">
-      {/* Left Sidebar */}
-      <aside className="timeoff-sidebar">
-        <div className="sidebar-header">
-          <div className="company-logo-section">
-            <img
-              src="/odoo-logo.svg"
-              alt="Company Logo"
-              className="company-logo"
-            />
-            <span className="company-name">
-              {user?.profile?.company_name || "Odoo India"}
-            </span>
-          </div>
-        </div>
-
-        <nav className="sidebar-nav">
-          <button className="nav-item">Employees</button>
-          <button className="nav-item">Attendance</button>
-          <button className="nav-item active">Time Off</button>
-          <button className="nav-item">Payroll</button>
-          <button className="nav-item">Reports</button>
-          <button className="nav-item">Settings</button>
-        </nav>
-      </aside>
+    <div className="dashboard-layout">
+      <Sidebar activeSection="timeoff" />
 
       {/* Main Content */}
-      <main className="timeoff-main">
+      <main className="dashboard-main">
+        <Header title="Time Off Management" />
         {/* Action Bar */}
         <div className="action-bar">
           <button className="btn-new" onClick={() => setShowModal(true)}>

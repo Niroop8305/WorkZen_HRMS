@@ -594,8 +594,8 @@ export const resetPasswordWithCode = async (req, res) => {
 
     // Mark the reset code as used
     await pool.query(
-      "UPDATE password_reset_codes SET is_used = TRUE WHERE reset_id = ?",
-      [codes[0].reset_id]
+      "UPDATE password_reset_codes SET is_used = TRUE WHERE id = ?",
+      [codes[0].id]
     );
 
     // Get user profile for personalized email

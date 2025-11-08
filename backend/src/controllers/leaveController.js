@@ -1,4 +1,5 @@
 import { LeaveRequest, LeaveBalance } from "../models/leaveModel.js";
+import pool from "../config/database.js";
 
 // @desc    Create a new leave request
 // @route   POST /api/leave/request
@@ -360,6 +361,66 @@ export const getAllocationHistory = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error while fetching allocation history",
+      error: error.message,
+    });
+  }
+};
+
+// @desc    Get employees currently on leave
+// @route   GET /api/leave/active-leaves
+// @access  Private (Admin/HR)
+export const getActiveLeaves = async (req, res) => {
+  try {
+    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
+
+    console.log("Fetching active leaves for date:", today);
+
+    const [rows] = await pool.query(
+      `SELECT 
+        lr.id,
+        lr.user_id,
+        lr.start_date,
+        lr.end_date,
+        lr.leave_type,
+        lr.days_requested,
+        CONCAT(COALESCE(ep.first_name, ''), ' ', COALESCE(ep.last_name, '')) as employee_name,
+        u.email
+       FROM leave_requests lr
+       LEFT JOIN users u ON lr.user_id = u.user_id
+       LEFT JOIN employee_profiles ep ON lr.user_id = ep.user_id
+       WHERE lr.status = 'Approved'
+       AND ? BETWEEN lr.start_date AND lr.end_date`,
+      [today]
+    );
+
+    console.log("Active leaves found:", rows.length);
+    console.log("Active leaves data:", rows);
+
+    // Create a map of user_id -> leave info for easy lookup
+    const activeLeaves = {};
+    rows.forEach((row) => {
+      activeLeaves[row.user_id] = {
+        id: row.id,
+        start_date: row.start_date,
+        end_date: row.end_date,
+        leave_type: row.leave_type,
+        days_requested: row.days_requested,
+        employee_name: row.employee_name,
+        email: row.email,
+      };
+    });
+
+    console.log("Active leaves map:", activeLeaves);
+
+    res.status(200).json({
+      success: true,
+      data: activeLeaves,
+    });
+  } catch (error) {
+    console.error("Get Active Leaves Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server error while fetching active leaves",
       error: error.message,
     });
   }

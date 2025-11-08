@@ -1,4 +1,4 @@
-import pool from '../config/database.js';
+import pool from "../config/database.js";
 
 // Mark attendance (Check-in/Check-out)
 export const markAttendance = async (req, res) => {
@@ -10,7 +10,7 @@ export const markAttendance = async (req, res) => {
     if (!attendance_date) {
       return res.status(400).json({
         success: false,
-        message: 'Attendance date is required'
+        message: "Attendance date is required",
       });
     }
 
@@ -30,27 +30,34 @@ export const markAttendance = async (req, res) => {
        check_out_time = VALUES(check_out_time),
        total_hours = VALUES(total_hours),
        status = VALUES(status)`,
-      [userId, attendance_date, check_in_time, check_out_time, totalHours, status || 'Present']
+      [
+        userId,
+        attendance_date,
+        check_in_time,
+        check_out_time,
+        totalHours,
+        status || "Present",
+      ]
     );
 
     res.status(200).json({
       success: true,
-      message: 'Attendance marked successfully',
+      message: "Attendance marked successfully",
       data: {
         userId,
         attendance_date,
         check_in_time,
         check_out_time,
         total_hours: totalHours,
-        status: status || 'Present'
-      }
+        status: status || "Present",
+      },
     });
   } catch (error) {
-    console.error('Error marking attendance:', error);
+    console.error("Error marking attendance:", error);
     res.status(500).json({
       success: false,
-      message: 'Error marking attendance',
-      error: error.message
+      message: "Error marking attendance",
+      error: error.message,
     });
   }
 };
@@ -79,28 +86,29 @@ export const getMyAttendance = async (req, res) => {
     const params = [userId];
 
     if (start_date && end_date) {
-      query += ' AND a.attendance_date BETWEEN ? AND ?';
+      query += " AND a.attendance_date BETWEEN ? AND ?";
       params.push(start_date, end_date);
     } else if (month && year) {
-      query += ' AND MONTH(a.attendance_date) = ? AND YEAR(a.attendance_date) = ?';
+      query +=
+        " AND MONTH(a.attendance_date) = ? AND YEAR(a.attendance_date) = ?";
       params.push(month, year);
     }
 
-    query += ' ORDER BY a.attendance_date DESC';
+    query += " ORDER BY a.attendance_date DESC";
 
     const [rows] = await pool.query(query, params);
 
     res.status(200).json({
       success: true,
       count: rows.length,
-      data: rows
+      data: rows,
     });
   } catch (error) {
-    console.error('Error fetching attendance:', error);
+    console.error("Error fetching attendance:", error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching attendance logs',
-      error: error.message
+      message: "Error fetching attendance logs",
+      error: error.message,
     });
   }
 };
@@ -113,7 +121,7 @@ export const getAttendanceByDay = async (req, res) => {
     if (!date) {
       return res.status(400).json({
         success: false,
-        message: 'Date parameter is required'
+        message: "Date parameter is required",
       });
     }
 
@@ -146,14 +154,14 @@ export const getAttendanceByDay = async (req, res) => {
     res.status(200).json({
       success: true,
       count: rows.length,
-      data: rows
+      data: rows,
     });
   } catch (error) {
-    console.error('Error fetching attendance by day:', error);
+    console.error("Error fetching attendance by day:", error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching attendance records',
-      error: error.message
+      message: "Error fetching attendance records",
+      error: error.message,
     });
   }
 };
@@ -186,40 +194,41 @@ export const getAllAttendance = async (req, res) => {
     const params = [];
 
     if (userId) {
-      query += ' AND a.user_id = ?';
+      query += " AND a.user_id = ?";
       params.push(userId);
     }
 
     if (department) {
-      query += ' AND ep.department = ?';
+      query += " AND ep.department = ?";
       params.push(department);
     }
 
     if (status) {
-      query += ' AND a.status = ?';
+      query += " AND a.status = ?";
       params.push(status);
     }
 
     if (month && year) {
-      query += ' AND MONTH(a.attendance_date) = ? AND YEAR(a.attendance_date) = ?';
+      query +=
+        " AND MONTH(a.attendance_date) = ? AND YEAR(a.attendance_date) = ?";
       params.push(month, year);
     }
 
-    query += ' ORDER BY a.attendance_date DESC, ep.employee_code';
+    query += " ORDER BY a.attendance_date DESC, ep.employee_code";
 
     const [rows] = await pool.query(query, params);
 
     res.status(200).json({
       success: true,
       count: rows.length,
-      data: rows
+      data: rows,
     });
   } catch (error) {
-    console.error('Error fetching all attendance:', error);
+    console.error("Error fetching all attendance:", error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching attendance records',
-      error: error.message
+      message: "Error fetching attendance records",
+      error: error.message,
     });
   }
 };
@@ -233,7 +242,7 @@ export const getMonthlySummary = async (req, res) => {
     if (!month || !year) {
       return res.status(400).json({
         success: false,
-        message: 'Month and year are required'
+        message: "Month and year are required",
       });
     }
 
@@ -266,15 +275,15 @@ export const getMonthlySummary = async (req, res) => {
         half_days: 0,
         late_days: 0,
         leave_days: 0,
-        total_hours_worked: 0
-      }
+        total_hours_worked: 0,
+      },
     });
   } catch (error) {
-    console.error('Error fetching monthly summary:', error);
+    console.error("Error fetching monthly summary:", error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching attendance summary',
-      error: error.message
+      message: "Error fetching attendance summary",
+      error: error.message,
     });
   }
 };
@@ -287,7 +296,7 @@ export const getPayableDays = async (req, res) => {
     if (!userId || !month || !year) {
       return res.status(400).json({
         success: false,
-        message: 'userId, month, and year are required'
+        message: "userId, month, and year are required",
       });
     }
 
@@ -335,15 +344,15 @@ export const getPayableDays = async (req, res) => {
         present_days: presentDays,
         paid_leave_days: paidLeaveDays,
         payable_days: payableDays,
-        unpaid_days: Math.max(0, daysInMonth - payableDays)
-      }
+        unpaid_days: Math.max(0, daysInMonth - payableDays),
+      },
     });
   } catch (error) {
-    console.error('Error calculating payable days:', error);
+    console.error("Error calculating payable days:", error);
     res.status(500).json({
       success: false,
-      message: 'Error calculating payable days',
-      error: error.message
+      message: "Error calculating payable days",
+      error: error.message,
     });
   }
 };
@@ -373,20 +382,20 @@ export const updateAttendance = async (req, res) => {
     if (result.affectedRows === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Attendance record not found'
+        message: "Attendance record not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: 'Attendance updated successfully'
+      message: "Attendance updated successfully",
     });
   } catch (error) {
-    console.error('Error updating attendance:', error);
+    console.error("Error updating attendance:", error);
     res.status(500).json({
       success: false,
-      message: 'Error updating attendance',
-      error: error.message
+      message: "Error updating attendance",
+      error: error.message,
     });
   }
 };
@@ -397,27 +406,27 @@ export const deleteAttendance = async (req, res) => {
     const { attendanceId } = req.params;
 
     const [result] = await pool.query(
-      'DELETE FROM attendance WHERE attendance_id = ?',
+      "DELETE FROM attendance WHERE attendance_id = ?",
       [attendanceId]
     );
 
     if (result.affectedRows === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Attendance record not found'
+        message: "Attendance record not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: 'Attendance record deleted successfully'
+      message: "Attendance record deleted successfully",
     });
   } catch (error) {
-    console.error('Error deleting attendance:', error);
+    console.error("Error deleting attendance:", error);
     res.status(500).json({
       success: false,
-      message: 'Error deleting attendance',
-      error: error.message
+      message: "Error deleting attendance",
+      error: error.message,
     });
   }
 };
@@ -426,13 +435,25 @@ export const deleteAttendance = async (req, res) => {
 // @route   POST /api/attendance/check-in
 // @access  Private
 export const checkIn = async (req, res) => {
+  const connection = await pool.getConnection();
   try {
     const userId = req.user.userId;
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
     const currentDateTime = new Date();
 
+    // Format datetime for MySQL
+    const formatDateTime = (date) => {
+      return date.toISOString().slice(0, 19).replace("T", " ");
+    };
+
+    console.log("Check-in request:", {
+      userId,
+      today,
+      currentDateTime: formatDateTime(currentDateTime),
+    });
+
     // Check if there's an active check-in (not yet checked out)
-    const [existing] = await pool.query(
+    const [existing] = await connection.query(
       `SELECT * FROM attendance 
        WHERE user_id = ? 
        AND attendance_date = ? 
@@ -446,39 +467,44 @@ export const checkIn = async (req, res) => {
     if (existing.length > 0) {
       return res.status(400).json({
         success: false,
-        message: 'You are currently checked in. Please check out first.',
+        message: "You are currently checked in. Please check out first.",
         data: {
           attendance_id: existing[0].attendance_id,
           check_in_time: existing[0].check_in_time,
-          check_out_time: existing[0].check_out_time
-        }
+          check_out_time: existing[0].check_out_time,
+        },
       });
     }
 
     // Insert new check-in record
-    const [result] = await pool.query(
+    const [result] = await connection.query(
       `INSERT INTO attendance (user_id, attendance_date, check_in_time, status)
        VALUES (?, ?, ?, 'Present')`,
-      [userId, today, currentDateTime]
+      [userId, today, formatDateTime(currentDateTime)]
     );
+
+    console.log("Check-in successful:", result.insertId);
 
     res.status(200).json({
       success: true,
-      message: 'Checked in successfully',
+      message: "Checked in successfully",
       data: {
         attendance_id: result.insertId,
         attendance_date: today,
-        check_in_time: currentDateTime,
-        status: 'checked_in'
-      }
+        check_in_time: formatDateTime(currentDateTime),
+        status: "checked_in",
+      },
     });
   } catch (error) {
-    console.error('Error during check-in:', error);
+    console.error("Error during check-in:", error);
+    console.error("Error stack:", error.stack);
     res.status(500).json({
       success: false,
-      message: 'Error during check-in',
-      error: error.message
+      message: "Error during check-in",
+      error: error.message,
     });
+  } finally {
+    connection.release();
   }
 };
 
@@ -486,65 +512,122 @@ export const checkIn = async (req, res) => {
 // @route   POST /api/attendance/check-out
 // @access  Private
 export const checkOut = async (req, res) => {
+  const connection = await pool.getConnection();
   try {
     const userId = req.user.userId;
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
     const currentDateTime = new Date();
 
+    // Format datetime for MySQL
+    const formatDateTime = (date) => {
+      return date.toISOString().slice(0, 19).replace("T", " ");
+    };
+
+    console.log("Check-out request:", {
+      userId,
+      today,
+      currentDateTime: formatDateTime(currentDateTime),
+    });
+
     // Find the active check-in (without check-out)
-    const [existing] = await pool.query(
+    // Look for records from today OR yesterday (in case of overnight shifts)
+    const [existing] = await connection.query(
       `SELECT * FROM attendance 
        WHERE user_id = ? 
-       AND attendance_date = ? 
        AND check_in_time IS NOT NULL 
        AND check_out_time IS NULL
+       AND attendance_date >= DATE_SUB(?, INTERVAL 1 DAY)
        ORDER BY check_in_time DESC
        LIMIT 1`,
       [userId, today]
     );
 
-    if (existing.length === 0) {
+    console.log("Found existing attendance:", existing);
+
+    if (!existing || existing.length === 0) {
       return res.status(400).json({
         success: false,
-        message: 'You need to check in first'
+        message: "You need to check in first",
       });
     }
 
     const attendance = existing[0];
 
     // Calculate total hours
-    const checkInTime = new Date(attendance.check_in_time);
+    // Combine attendance_date with check_in_time to get full datetime
+    let checkInTime;
+    if (attendance.check_in_time instanceof Date) {
+      checkInTime = attendance.check_in_time;
+    } else {
+      // If check_in_time is stored as TIME, combine with attendance_date
+      const dateStr = new Date(attendance.attendance_date)
+        .toISOString()
+        .split("T")[0];
+      const timeStr =
+        typeof attendance.check_in_time === "string"
+          ? attendance.check_in_time
+          : attendance.check_in_time.toString();
+      checkInTime = new Date(`${dateStr} ${timeStr}`);
+    }
+
     const checkOutTime = currentDateTime;
     const diffMs = checkOutTime - checkInTime;
-    const totalHours = (diffMs / (1000 * 60 * 60)).toFixed(2);
+    const totalHours = Math.max(0, diffMs / (1000 * 60 * 60)).toFixed(2);
+
+    console.log("Calculating hours:", {
+      checkInTime: checkInTime.toISOString(),
+      checkOutTime: formatDateTime(checkOutTime),
+      diffMs,
+      totalHours,
+    });
+
+    // Validate totalHours is a valid number
+    if (isNaN(totalHours) || !isFinite(totalHours)) {
+      console.error("Invalid total hours calculated:", {
+        totalHours,
+        diffMs,
+        checkInTime,
+        checkOutTime,
+      });
+      return res.status(500).json({
+        success: false,
+        message:
+          "Error calculating work hours. Please try again or contact support.",
+      });
+    }
 
     // Update check-out
-    await pool.query(
+    const [updateResult] = await connection.query(
       `UPDATE attendance 
        SET check_out_time = ?, total_hours = ?
        WHERE attendance_id = ?`,
-      [currentDateTime, totalHours, attendance.attendance_id]
+      [formatDateTime(currentDateTime), totalHours, attendance.attendance_id]
     );
+
+    console.log("Update result:", updateResult);
 
     res.status(200).json({
       success: true,
-      message: 'Checked out successfully',
+      message: "Checked out successfully",
       data: {
         attendance_id: attendance.attendance_id,
         attendance_date: today,
         check_in_time: attendance.check_in_time,
-        check_out_time: currentDateTime,
+        check_out_time: formatDateTime(currentDateTime),
         total_hours: totalHours,
-        status: 'checked_out'
-      }
+        status: "checked_out",
+      },
     });
   } catch (error) {
-    console.error('Error during check-out:', error);
+    console.error("Error during check-out:", error);
+    console.error("Error stack:", error.stack);
     res.status(500).json({
       success: false,
-      message: 'Error during check-out',
-      error: error.message
+      message: "Error during check-out",
+      error: error.message,
     });
+  } finally {
+    connection.release();
   }
 };
 
@@ -554,7 +637,7 @@ export const checkOut = async (req, res) => {
 export const getAttendanceStatus = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
 
     // Get the latest attendance record for today
     const [rows] = await pool.query(
@@ -569,21 +652,21 @@ export const getAttendanceStatus = async (req, res) => {
       return res.status(200).json({
         success: true,
         data: {
-          status: 'not_checked_in',
+          status: "not_checked_in",
           attendance_date: today,
           check_in_time: null,
-          check_out_time: null
-        }
+          check_out_time: null,
+        },
       });
     }
 
     const attendance = rows[0];
-    let status = 'not_checked_in';
-    
+    let status = "not_checked_in";
+
     if (attendance.check_in_time && attendance.check_out_time) {
-      status = 'checked_out';
+      status = "checked_out";
     } else if (attendance.check_in_time) {
-      status = 'checked_in';
+      status = "checked_in";
     }
 
     res.status(200).json({
@@ -594,25 +677,25 @@ export const getAttendanceStatus = async (req, res) => {
         attendance_date: attendance.attendance_date,
         check_in_time: attendance.check_in_time,
         check_out_time: attendance.check_out_time,
-        total_hours: attendance.total_hours
-      }
+        total_hours: attendance.total_hours,
+      },
     });
   } catch (error) {
-    console.error('Error fetching attendance status:', error);
+    console.error("Error fetching attendance status:", error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching attendance status',
-      error: error.message
+      message: "Error fetching attendance status",
+      error: error.message,
     });
   }
 };
 
-// @desc    Get attendance status for all employees (Admin/HR)
+// @desc    Get attendance status for all employees
 // @route   GET /api/attendance/all-status
-// @access  Private (Admin, HR Manager, Payroll Officer)
+// @access  Private (All authenticated users)
 export const getAllEmployeesAttendanceStatus = async (req, res) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
 
     // Get all users with their latest attendance status for today
     const [rows] = await pool.query(
@@ -650,20 +733,20 @@ export const getAllEmployeesAttendanceStatus = async (req, res) => {
 
     // Create a map of user_id to status
     const attendanceMap = {};
-    rows.forEach(row => {
+    rows.forEach((row) => {
       attendanceMap[row.user_id] = row.status;
     });
 
     res.status(200).json({
       success: true,
-      data: attendanceMap
+      data: attendanceMap,
     });
   } catch (error) {
-    console.error('Error fetching all employees attendance status:', error);
+    console.error("Error fetching all employees attendance status:", error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching attendance status',
-      error: error.message
+      message: "Error fetching attendance status",
+      error: error.message,
     });
   }
 };
@@ -674,7 +757,7 @@ export const getAllEmployeesAttendanceStatus = async (req, res) => {
 export const getTodayAttendance = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const today = new Date().toISOString().split('T')[0];
+    const today = new Date().toISOString().split("T")[0];
 
     const [rows] = await pool.query(
       `SELECT 
@@ -701,15 +784,15 @@ export const getTodayAttendance = async (req, res) => {
       data: {
         records: rows,
         total_hours: totalHoursToday.toFixed(2),
-        record_count: rows.length
-      }
+        record_count: rows.length,
+      },
     });
   } catch (error) {
-    console.error('Error fetching today\'s attendance:', error);
+    console.error("Error fetching today's attendance:", error);
     res.status(500).json({
       success: false,
-      message: 'Error fetching attendance history',
-      error: error.message
+      message: "Error fetching attendance history",
+      error: error.message,
     });
   }
 };

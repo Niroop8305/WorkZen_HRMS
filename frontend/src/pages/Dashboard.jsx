@@ -3,6 +3,8 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import CreateUserModal from "../components/CreateUserModal";
+import Sidebar from "../components/Sidebar";
+import Header from "../components/Header";
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -16,6 +18,7 @@ const Dashboard = () => {
   const [attendanceStatus, setAttendanceStatus] = useState("not_checked_in");
   const [attendanceData, setAttendanceData] = useState(null);
   const [employeeAttendance, setEmployeeAttendance] = useState({});
+  const [activeLeaves, setActiveLeaves] = useState({});
   const profileMenuRef = useRef(null);
 
   const handleLogout = () => {
@@ -62,30 +65,57 @@ const Dashboard = () => {
   useEffect(() => {
     fetchEmployees();
     fetchAttendanceStatus();
-    
+    fetchActiveLeaves();
+
     // Refresh attendance status every 30 seconds
     const interval = setInterval(() => {
       fetchAttendanceStatus();
+      fetchActiveLeaves();
       if (employees.length > 0) {
         fetchAllEmployeesAttendance(employees);
       }
     }, 30000);
-    
+
     return () => clearInterval(interval);
   }, [employees.length]);
 
   const fetchAttendanceStatus = async () => {
     try {
       const token = localStorage.getItem("workzen_token");
-      const response = await axios.get("http://localhost:5000/api/attendance/status", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axios.get(
+        "http://localhost:5000/api/attendance/status",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
       setAttendanceStatus(response.data.data.status);
       setAttendanceData(response.data.data);
     } catch (error) {
       console.error("Error fetching attendance status:", error);
+    }
+  };
+
+  const fetchActiveLeaves = async () => {
+    try {
+      const token = localStorage.getItem("workzen_token");
+      const response = await axios.get(
+        "http://localhost:5000/api/leave/active-leaves",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      console.log("Active leaves response:", response.data);
+      if (response.data.success) {
+        console.log("Setting active leaves:", response.data.data);
+        setActiveLeaves(response.data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching active leaves:", error);
+      setActiveLeaves({});
     }
   };
 
@@ -100,22 +130,27 @@ const Dashboard = () => {
           },
         }
       );
-      
+
+      console.log("All employees attendance response:", response.data);
+
       if (response.data.success) {
         // Map the attendance status: checked_in -> online, others -> offline
         const attendanceMap = {};
-        Object.keys(response.data.data).forEach(userId => {
+        Object.keys(response.data.data).forEach((userId) => {
           const status = response.data.data[userId];
-          attendanceMap[userId] = status === 'checked_in' ? 'online' : 'offline';
+          attendanceMap[userId] =
+            status === "checked_in" ? "online" : "offline";
         });
+        console.log("Setting employee attendance map:", attendanceMap);
         setEmployeeAttendance(attendanceMap);
       }
     } catch (error) {
       console.error("Error fetching employees attendance:", error);
+      console.error("Error details:", error.response?.data);
       // Fallback to offline for all
       const attendanceMap = {};
-      employeeList.forEach(emp => {
-        attendanceMap[emp.user_id] = 'offline';
+      employeeList.forEach((emp) => {
+        attendanceMap[emp.user_id] = "offline";
       });
       setEmployeeAttendance(attendanceMap);
     }
@@ -124,9 +159,10 @@ const Dashboard = () => {
   const handleCheckInOut = async () => {
     try {
       const token = localStorage.getItem("workzen_token");
-      const endpoint = attendanceStatus === "checked_in"
-        ? "/api/attendance/check-out"
-        : "/api/attendance/check-in";
+      const endpoint =
+        attendanceStatus === "checked_in"
+          ? "/api/attendance/check-out"
+          : "/api/attendance/check-in";
 
       const response = await axios.post(
         `http://localhost:5000${endpoint}`,
@@ -142,7 +178,7 @@ const Dashboard = () => {
         setAttendanceStatus(response.data.data.status);
         setAttendanceData(response.data.data);
         alert(response.data.message);
-        
+
         // Refresh all employees' attendance status
         if (employees.length > 0) {
           await fetchAllEmployeesAttendance(employees);
@@ -165,7 +201,7 @@ const Dashboard = () => {
       });
       const employeeList = response.data.data || [];
       setEmployees(employeeList);
-      
+
       // Fetch attendance for employees
       await fetchAllEmployeesAttendance(employeeList);
     } catch (error) {
@@ -210,24 +246,62 @@ const Dashboard = () => {
 
   // Get employee card status (for displaying in employee cards)
   const getEmployeeStatus = (employee) => {
-    // Check if employee is on leave (you can add leave checking logic here)
-    // For now, we'll just return offline for all employees
-    // In production, you'd check their attendance status from the API
-    return employeeAttendance[employee.user_id] || 'offline';
+    // Check if employee is on approved leave
+    console.log(`Checking employee ${employee.user_id}:`, {
+      isOnLeave: !!activeLeaves[employee.user_id],
+      activeLeaves: activeLeaves,
+      employeeUserId: employee.user_id,
+    });
+
+    if (activeLeaves[employee.user_id]) {
+      console.log(`Employee ${employee.user_id} is on leave!`);
+      return "leave";
+    }
+    // Check attendance status
+    return employeeAttendance[employee.user_id] || "offline";
   };
 
   // Define navigation items based on user role
   const allNavItems = [
-    { id: "employees", label: "Employees", hasSubItems: false, path: null, roles: ["Admin", "HR Manager", "Payroll Officer"] },
-    { id: "attendance", label: "Attendance", hasSubItems: false, path: "/attendance", roles: ["Admin", "HR Manager", "Payroll Officer", "Employee"] },
-    { id: "timeoff", label: "Time Off", hasSubItems: false, path: null, roles: ["Admin", "HR Manager", "Payroll Officer", "Employee"] },
-    { id: "payroll", label: "Payroll", hasSubItems: false, path: null, roles: ["Admin", "HR Manager", "Payroll Officer", "Employee"] },
-    { id: "reports", label: "Reports", hasSubItems: false, path: null, roles: ["Admin", "HR Manager", "Payroll Officer"] },
-    { id: "settings", label: "Settings", hasSubItems: false, path: null, roles: ["Admin", "HR Manager", "Payroll Officer"] },
+    {
+      id: "employees",
+      label: "Employees",
+      hasSubItems: false,
+      path: null,
+      roles: ["Admin", "HR Manager", "Payroll Officer"],
+    },
+    {
+      id: "attendance",
+      label: "Attendance",
+      hasSubItems: false,
+      path: "/attendance",
+      roles: ["Admin", "HR Manager", "Payroll Officer", "Employee"],
+    },
+    {
+      id: "timeoff",
+      label: "Time Off",
+      hasSubItems: false,
+      path: null,
+      roles: ["Admin", "HR Manager", "Payroll Officer", "Employee"],
+    },
+    {
+      id: "payroll",
+      label: "Payroll",
+      hasSubItems: false,
+      path: null,
+      roles: ["Admin", "HR Manager", "Payroll Officer", "Employee"],
+    },
+    {
+      id: "reports",
+      label: "Reports",
+      hasSubItems: false,
+      path: null,
+      roles: ["Admin", "HR Manager", "Payroll Officer"],
+    },
   ];
 
   // Filter nav items based on user role
-  const navItems = allNavItems.filter(item => 
+  const navItems = allNavItems.filter((item) =>
     item.roles.includes(user?.role || user?.roleName || "Employee")
   );
 
@@ -242,35 +316,7 @@ const Dashboard = () => {
   return (
     <div className="dashboard-layout">
       {/* Left Sidebar Navigation */}
-      <aside className="dashboard-sidebar">
-        <div className="sidebar-header">
-          <div className="sidebar-company">
-            <img
-              src="/odoo-logo.svg"
-              alt="Company Logo"
-              className="sidebar-logo"
-            />
-            <span className="company-name">
-              {user?.profile?.company_name || "Odoo India"}
-            </span>
-          </div>
-        </div>
-
-        <nav className="sidebar-nav">
-          {navItems.map((item) => (
-            <button
-              key={item.id}
-              className={`nav-item ${
-                activeSection === item.id ? "active" : ""
-              }`}
-              onClick={() => handleNavClick(item)}
-            >
-              <span>{item.label}</span>
-              {item.hasSubItems && <span className="nav-arrow">▼</span>}
-            </button>
-          ))}
-        </nav>
-      </aside>
+      <Sidebar activeSection={activeSection} />
 
       {/* Main Content Area */}
       <main className="dashboard-main">
