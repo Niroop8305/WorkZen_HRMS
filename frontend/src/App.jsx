@@ -11,6 +11,7 @@ import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import Dashboard from "./pages/Dashboard";
 import MyProfile from "./pages/MyProfile";
+import Reports from "./pages/Reports";
 import "./styles/App.css";
 
 function App() {
@@ -61,6 +62,18 @@ function App() {
               element={
                 <ProtectedRoute>
                   <AttendanceRouter />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Reports Route - Admin and Payroll Officer only */}
+            <Route
+              path="/reports"
+              element={
+                <ProtectedRoute
+                  allowedRoles={["Admin", "Payroll Officer"]}
+                >
+                  <Reports />
                 </ProtectedRoute>
               }
             />

@@ -7,7 +7,8 @@ import {
   generatePayroll,
   updatePayrollStatus,
   getSalaryComponents,
-  getEmployeeSalaryStructure
+  getEmployeeSalaryStructure,
+  getSalaryStatement
 } from '../controllers/payrollController.js';
 
 const router = express.Router();
@@ -22,5 +23,6 @@ router.post('/generate', protect, authorize('Admin', 'Payroll Officer'), generat
 router.put('/:payrollId/status', protect, authorize('Admin', 'Payroll Officer'), updatePayrollStatus);
 router.get('/components', protect, authorize('Admin', 'Payroll Officer'), getSalaryComponents);
 router.get('/salary-structure/:userId', protect, authorize('Admin', 'Payroll Officer'), getEmployeeSalaryStructure);
+router.get('/salary-statement', protect, authorize('Admin', 'Payroll Officer'), getSalaryStatement);
 
 export default router;

@@ -106,7 +106,7 @@ const Dashboard = () => {
     { id: "attendance", label: "Attendance", hasSubItems: false, path: "/attendance" },
     { id: "timeoff", label: "Time Off", hasSubItems: false, path: null },
     { id: "payroll", label: "Payroll", hasSubItems: false, path: null },
-    { id: "reports", label: "Reports", hasSubItems: false, path: null },
+    { id: "reports", label: "Reports", hasSubItems: false, path: "/reports" },
     { id: "settings", label: "Settings", hasSubItems: false, path: null },
   ];
 
