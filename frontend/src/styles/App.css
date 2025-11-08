@@ -5,29 +5,30 @@
 
 :root {
   /* Odoo Brand Colors */
-  --odoo-purple: #714B67;
-  --odoo-purple-light: #8B5F83;
-  --odoo-purple-dark: #5A3C52;
+  --odoo-purple: #714b67;
+  --odoo-purple-light: #8b5f83;
+  --odoo-purple-dark: #5a3c52;
   --odoo-gray: #878787;
-  --odoo-gray-light: #A8A8A8;
+  --odoo-gray-light: #a8a8a8;
   --odoo-gray-dark: #666666;
-  
+
   /* Additional Colors */
-  --white: #FFFFFF;
-  --black: #1A1A1A;
-  --bg-dark: #0F0F0F;
-  --bg-card: #1E1E1E;
+  --white: #ffffff;
+  --black: #1a1a1a;
+  --bg-dark: #0f0f0f;
+  --bg-card: #1e1e1e;
   --border-color: #333333;
-  --input-bg: #2A2A2A;
-  --text-primary: #FFFFFF;
-  --text-secondary: #A8A8A8;
-  --success: #4CAF50;
-  --error: #F44336;
-  --warning: #FF9800;
-  
+  --input-bg: #2a2a2a;
+  --text-primary: #ffffff;
+  --text-secondary: #a8a8a8;
+  --success: #4caf50;
+  --error: #f44336;
+  --warning: #ff9800;
+
   /* Typography */
-  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
+    "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
 }
 
 * {
@@ -76,19 +77,30 @@ body {
 }
 
 .auth-page::before {
-  content: '';
+  content: "";
   position: absolute;
   top: -50%;
   right: -50%;
   width: 100%;
   height: 100%;
-  background: radial-gradient(circle, rgba(113, 75, 103, 0.1) 0%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    rgba(113, 75, 103, 0.1) 0%,
+    transparent 70%
+  );
   animation: pulse 15s ease-in-out infinite;
 }
 
 @keyframes pulse {
-  0%, 100% { transform: scale(1); opacity: 0.3; }
-  50% { transform: scale(1.1); opacity: 0.5; }
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.5;
+  }
 }
 
 .auth-card {
@@ -124,7 +136,11 @@ body {
 }
 
 .auth-logo-box {
-  background: linear-gradient(135deg, var(--odoo-purple) 0%, var(--odoo-purple-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--odoo-purple) 0%,
+    var(--odoo-purple-dark) 100%
+  );
   border-radius: 8px;
   padding: 20px;
   display: inline-block;
@@ -219,17 +235,40 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--odoo-purple) 0%, var(--odoo-purple-dark) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--odoo-purple) 0%,
+    var(--odoo-purple-dark) 100%
+  );
   color: var(--white);
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, var(--odoo-purple-light) 0%, var(--odoo-purple) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--odoo-purple-light) 0%,
+    var(--odoo-purple) 100%
+  );
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(113, 75, 103, 0.4);
 }
 
 .btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  background: var(--odoo-gray);
+  color: var(--white);
+}
+
+.btn-secondary:hover {
+  background: var(--odoo-gray-dark);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(135, 135, 135, 0.3);
+}
+
+.btn-secondary:active {
   transform: translateY(0);
 }
 
@@ -279,13 +318,13 @@ body {
 .alert-error {
   background: rgba(244, 67, 54, 0.1);
   border: 1px solid rgba(244, 67, 54, 0.3);
-  color: #F44336;
+  color: #f44336;
 }
 
 .alert-success {
   background: rgba(76, 175, 80, 0.1);
   border: 1px solid rgba(76, 175, 80, 0.3);
-  color: #4CAF50;
+  color: #4caf50;
 }
 
 .alert-info {
@@ -309,7 +348,9 @@ body {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* =====================================================
@@ -320,15 +361,31 @@ body {
   text-align: center;
 }
 
-.mt-1 { margin-top: 8px; }
-.mt-2 { margin-top: 16px; }
-.mt-3 { margin-top: 24px; }
-.mt-4 { margin-top: 32px; }
+.mt-1 {
+  margin-top: 8px;
+}
+.mt-2 {
+  margin-top: 16px;
+}
+.mt-3 {
+  margin-top: 24px;
+}
+.mt-4 {
+  margin-top: 32px;
+}
 
-.mb-1 { margin-bottom: 8px; }
-.mb-2 { margin-bottom: 16px; }
-.mb-3 { margin-bottom: 24px; }
-.mb-4 { margin-bottom: 32px; }
+.mb-1 {
+  margin-bottom: 8px;
+}
+.mb-2 {
+  margin-bottom: 16px;
+}
+.mb-3 {
+  margin-bottom: 24px;
+}
+.mb-4 {
+  margin-bottom: 32px;
+}
 
 .flex {
   display: flex;
@@ -340,9 +397,15 @@ body {
   justify-content: center;
 }
 
-.gap-1 { gap: 8px; }
-.gap-2 { gap: 16px; }
-.gap-3 { gap: 24px; }
+.gap-1 {
+  gap: 8px;
+}
+.gap-2 {
+  gap: 16px;
+}
+.gap-3 {
+  gap: 24px;
+}
 
 /* =====================================================
    Responsive Design
@@ -353,11 +416,11 @@ body {
   .auth-card {
     padding: 30px 20px;
   }
-  
+
   .auth-logo-text {
     font-size: 20px;
   }
-  
+
   .auth-title {
     font-size: 18px;
   }
@@ -382,7 +445,7 @@ body {
   .auth-card {
     padding: 24px 16px;
   }
-  
+
   .auth-page {
     padding: 16px;
   }
