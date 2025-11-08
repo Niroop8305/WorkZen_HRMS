@@ -12,6 +12,8 @@ import SignUp from "./pages/SignUp";
 import Dashboard from "./pages/Dashboard";
 import MyProfile from "./pages/MyProfile";
 import Reports from "./pages/Reports";
+import PayrollPage from "./pages/PayrollPage";
+import PayrunDashboard from "./pages/PayrunDashboard";
 import "./styles/App.css";
 
 function App() {
@@ -21,7 +23,7 @@ function App() {
         <div className="app-container">
           <Routes>
             {/* Public Routes */}
-            <Route path="/" element={<Navigate to="/login" />} />
+            <Route path="/" element={<Navigate to="/payroll" />} />
             <Route path="/login" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
 
@@ -78,6 +80,12 @@ function App() {
               }
             />
 
+            {/* Payroll Page - Standalone (No protection for demo) */}
+            <Route path="/payroll" element={<PayrollPage />} />
+            
+            {/* Payrun Dashboard - Functional Payrun System */}
+            <Route path="/payrun" element={<PayrunDashboard />} />
+
             {/* Unauthorized Page */}
             <Route
               path="/unauthorized"
@@ -102,6 +110,7 @@ function App() {
                 </div>
               }
             />
+
             {/* 404 Page */}
             <Route
               path="*"
