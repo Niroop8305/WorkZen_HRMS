@@ -9,6 +9,7 @@ import attendanceRoutes from './src/routes/attendanceRoutes.js';
 import leaveRoutes from './src/routes/leaveRoutes.js';
 import payrollRoutes from './src/routes/payrollRoutes.js';
 import dashboardRoutes from './src/routes/dashboardRoutes.js';
+import emailRoutes from './src/routes/emailRoutes.js';
 import { errorHandler } from './src/middleware/errorHandler.js';
 
 // Load environment variables
@@ -45,6 +46,7 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/leave', leaveRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/email', emailRoutes);
 
 // 404 Handler
 app.use('*', (req, res) => {

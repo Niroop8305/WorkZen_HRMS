@@ -8,10 +8,22 @@ import {
   getMonthlySummary,
   getPayableDays,
   updateAttendance,
-  deleteAttendance
+  deleteAttendance,
+  checkIn,
+  checkOut,
+  getAttendanceStatus,
+  getAllEmployeesAttendanceStatus,
+  getTodayAttendance
 } from '../controllers/attendanceController.js';
 
 const router = express.Router();
+
+// Check-in/Check-out routes
+router.post('/check-in', protect, checkIn);
+router.post('/check-out', protect, checkOut);
+router.get('/status', protect, getAttendanceStatus);
+router.get('/today', protect, getTodayAttendance);
+router.get('/all-status', protect, authorize('Admin', 'HR Manager', 'Payroll Officer'), getAllEmployeesAttendanceStatus);
 
 // Employee routes
 router.post('/mark', protect, markAttendance);

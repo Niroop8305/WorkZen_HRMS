@@ -421,3 +421,295 @@ export const deleteAttendance = async (req, res) => {
     });
   }
 };
+
+// @desc    Check-in (Clock in)
+// @route   POST /api/attendance/check-in
+// @access  Private
+export const checkIn = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const today = new Date().toISOString().split('T')[0];
+    const currentDateTime = new Date();
+
+    // Check if there's an active check-in (not yet checked out)
+    const [existing] = await pool.query(
+      `SELECT * FROM attendance 
+       WHERE user_id = ? 
+       AND attendance_date = ? 
+       AND check_in_time IS NOT NULL 
+       AND check_out_time IS NULL
+       ORDER BY check_in_time DESC
+       LIMIT 1`,
+      [userId, today]
+    );
+
+    if (existing.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'You are currently checked in. Please check out first.',
+        data: {
+          attendance_id: existing[0].attendance_id,
+          check_in_time: existing[0].check_in_time,
+          check_out_time: existing[0].check_out_time
+        }
+      });
+    }
+
+    // Insert new check-in record
+    const [result] = await pool.query(
+      `INSERT INTO attendance (user_id, attendance_date, check_in_time, status)
+       VALUES (?, ?, ?, 'Present')`,
+      [userId, today, currentDateTime]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Checked in successfully',
+      data: {
+        attendance_id: result.insertId,
+        attendance_date: today,
+        check_in_time: currentDateTime,
+        status: 'checked_in'
+      }
+    });
+  } catch (error) {
+    console.error('Error during check-in:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error during check-in',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Check-out (Clock out)
+// @route   POST /api/attendance/check-out
+// @access  Private
+export const checkOut = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const today = new Date().toISOString().split('T')[0];
+    const currentDateTime = new Date();
+
+    // Find the active check-in (without check-out)
+    const [existing] = await pool.query(
+      `SELECT * FROM attendance 
+       WHERE user_id = ? 
+       AND attendance_date = ? 
+       AND check_in_time IS NOT NULL 
+       AND check_out_time IS NULL
+       ORDER BY check_in_time DESC
+       LIMIT 1`,
+      [userId, today]
+    );
+
+    if (existing.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'You need to check in first'
+      });
+    }
+
+    const attendance = existing[0];
+
+    // Calculate total hours
+    const checkInTime = new Date(attendance.check_in_time);
+    const checkOutTime = currentDateTime;
+    const diffMs = checkOutTime - checkInTime;
+    const totalHours = (diffMs / (1000 * 60 * 60)).toFixed(2);
+
+    // Update check-out
+    await pool.query(
+      `UPDATE attendance 
+       SET check_out_time = ?, total_hours = ?
+       WHERE attendance_id = ?`,
+      [currentDateTime, totalHours, attendance.attendance_id]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Checked out successfully',
+      data: {
+        attendance_id: attendance.attendance_id,
+        attendance_date: today,
+        check_in_time: attendance.check_in_time,
+        check_out_time: currentDateTime,
+        total_hours: totalHours,
+        status: 'checked_out'
+      }
+    });
+  } catch (error) {
+    console.error('Error during check-out:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error during check-out',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Get current attendance status
+// @route   GET /api/attendance/status
+// @access  Private
+export const getAttendanceStatus = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const today = new Date().toISOString().split('T')[0];
+
+    // Get the latest attendance record for today
+    const [rows] = await pool.query(
+      `SELECT * FROM attendance 
+       WHERE user_id = ? AND attendance_date = ?
+       ORDER BY check_in_time DESC
+       LIMIT 1`,
+      [userId, today]
+    );
+
+    if (rows.length === 0) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          status: 'not_checked_in',
+          attendance_date: today,
+          check_in_time: null,
+          check_out_time: null
+        }
+      });
+    }
+
+    const attendance = rows[0];
+    let status = 'not_checked_in';
+    
+    if (attendance.check_in_time && attendance.check_out_time) {
+      status = 'checked_out';
+    } else if (attendance.check_in_time) {
+      status = 'checked_in';
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        status,
+        attendance_id: attendance.attendance_id,
+        attendance_date: attendance.attendance_date,
+        check_in_time: attendance.check_in_time,
+        check_out_time: attendance.check_out_time,
+        total_hours: attendance.total_hours
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching attendance status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching attendance status',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Get attendance status for all employees (Admin/HR)
+// @route   GET /api/attendance/all-status
+// @access  Private (Admin, HR Manager, Payroll Officer)
+export const getAllEmployeesAttendanceStatus = async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+
+    // Get all users with their latest attendance status for today
+    const [rows] = await pool.query(
+      `SELECT 
+        u.user_id,
+        u.email,
+        ep.first_name,
+        ep.last_name,
+        ep.employee_code,
+        a.attendance_date,
+        a.check_in_time,
+        a.check_out_time,
+        CASE
+          WHEN a.check_in_time IS NOT NULL AND a.check_out_time IS NOT NULL THEN 'checked_out'
+          WHEN a.check_in_time IS NOT NULL THEN 'checked_in'
+          ELSE 'not_checked_in'
+        END as status
+      FROM users u
+      LEFT JOIN employee_profiles ep ON u.user_id = ep.user_id
+      LEFT JOIN (
+        SELECT user_id, attendance_date, check_in_time, check_out_time
+        FROM attendance
+        WHERE attendance_date = ?
+        AND attendance_id IN (
+          SELECT MAX(attendance_id)
+          FROM attendance
+          WHERE attendance_date = ?
+          GROUP BY user_id
+        )
+      ) a ON u.user_id = a.user_id
+      WHERE u.is_active = TRUE
+      ORDER BY ep.first_name, ep.last_name`,
+      [today, today]
+    );
+
+    // Create a map of user_id to status
+    const attendanceMap = {};
+    rows.forEach(row => {
+      attendanceMap[row.user_id] = row.status;
+    });
+
+    res.status(200).json({
+      success: true,
+      data: attendanceMap
+    });
+  } catch (error) {
+    console.error('Error fetching all employees attendance status:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching attendance status',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Get today's attendance history (all check-ins/check-outs)
+// @route   GET /api/attendance/today
+// @access  Private
+export const getTodayAttendance = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const today = new Date().toISOString().split('T')[0];
+
+    const [rows] = await pool.query(
+      `SELECT 
+        attendance_id,
+        attendance_date,
+        check_in_time,
+        check_out_time,
+        total_hours,
+        status,
+        remarks
+      FROM attendance
+      WHERE user_id = ? AND attendance_date = ?
+      ORDER BY check_in_time DESC`,
+      [userId, today]
+    );
+
+    // Calculate total hours worked today
+    const totalHoursToday = rows.reduce((sum, record) => {
+      return sum + (parseFloat(record.total_hours) || 0);
+    }, 0);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        records: rows,
+        total_hours: totalHoursToday.toFixed(2),
+        record_count: rows.length
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching today\'s attendance:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching attendance history',
+      error: error.message
+    });
+  }
+};

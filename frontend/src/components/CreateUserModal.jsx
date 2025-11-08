@@ -44,10 +44,14 @@ const CreateUserModal = ({ isOpen, onClose, onUserCreated }) => {
       );
 
       if (response.data.success) {
-        setCreatedUser(response.data.data);
+        setCreatedUser({
+          ...response.data.data,
+          emailSent: response.data.emailSent,
+          message: response.data.message
+        });
         onUserCreated(response.data.data);
         
-        // Reset form after 3 seconds
+        // Reset form after 5 seconds
         setTimeout(() => {
           handleClose();
         }, 5000);
@@ -95,9 +99,15 @@ const CreateUserModal = ({ isOpen, onClose, onUserCreated }) => {
                 <p><strong>Email:</strong> {createdUser.email}</p>
                 <p><strong>Temporary Password:</strong> <code style={{ background: '#333', padding: '4px 8px', borderRadius: '4px' }}>{createdUser.temporary_password}</code></p>
                 <p><strong>Employee Code:</strong> {createdUser.employee_code}</p>
-                <p style={{ marginTop: '10px', fontSize: '12px', color: '#FFC107' }}>
-                  ⚠️ Please save these credentials. In production, they would be emailed to the user.
-                </p>
+                {createdUser.emailSent ? (
+                  <p style={{ marginTop: '10px', fontSize: '13px', color: '#155724' }}>
+                    ✉️ <strong>Welcome email sent successfully!</strong> The user will receive their credentials at {createdUser.email}
+                  </p>
+                ) : (
+                  <p style={{ marginTop: '10px', fontSize: '13px', color: '#856404' }}>
+                    ⚠️ Email could not be sent. Please manually share these credentials with the user.
+                  </p>
+                )}
               </div>
             </div>
           )}
