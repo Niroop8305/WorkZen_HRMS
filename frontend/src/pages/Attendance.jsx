@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import '../styles/App.css';
 import '../styles/Attendance.css';
 
 const ROLE_ADMIN = 'Admin';
@@ -60,12 +62,14 @@ function computeWorkAndExtra({ date, checkIn, checkOut, breaks = [], assignedHou
 }
 
 const Attendance = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [view, setView] = useState('day'); // 'day' or 'month'
   const [date, setDate] = useState(() => new Date()); // Current date
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [records, setRecords] = useState([]);
+  const [activeSection, setActiveSection] = useState('attendance');
 
   const isPrivileged = useMemo(() => {
     const role = user?.role || '';
@@ -141,10 +145,66 @@ const Attendance = () => {
     return days;
   }, [view, date, records]);
 
+  const navItems = [
+    { id: 'employees', label: 'Employees', path: '/dashboard' },
+    { id: 'attendance', label: 'Attendance', path: '/attendance' },
+    { id: 'timeoff', label: 'Time Off', path: null },
+    { id: 'payroll', label: 'Payroll', path: null },
+    { id: 'reports', label: 'Reports', path: '/reports' },
+    { id: 'settings', label: 'Settings', path: null },
+  ];
+
+  const handleNavClick = (item) => {
+    if (item.path) {
+      navigate(item.path);
+    } else {
+      setActiveSection(item.id);
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
-    <div className="attendance-page">
-      {/* Controls Bar */}
-      <div className="controls-bar">
+    <div className="dashboard-layout">
+      {/* Left Sidebar Navigation */}
+      <aside className="dashboard-sidebar">
+        <div className="sidebar-header">
+          <div className="sidebar-company">
+            <img 
+              src="/odoo-logo.svg" 
+              alt="Company Logo" 
+              className="sidebar-logo"
+            />
+            <span className="company-name">{user?.profile?.company_name || 'Odoo India'}</span>
+          </div>
+        </div>
+
+        <nav className="sidebar-nav">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              className={`nav-item ${activeSection === item.id ? 'active' : ''}`}
+              onClick={() => handleNavClick(item)}
+            >
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
+      </aside>
+
+      {/* Main Content */}
+      <div className="attendance-page">
+        {/* Top Header */}
+        <div className="attendance-header">
+          <div className="header-title">Attendance Management</div>
+          <button className="btn-logout" onClick={handleLogout}>Logout</button>
+        </div>
+
+        {/* Controls Bar */}
+        <div className="controls-bar">
         <div className="controls-left">
           <button className="arrow-btn" onClick={gotoPrev}>←</button>
           <button className="arrow-btn" onClick={gotoNext}>→</button>
@@ -282,6 +342,7 @@ const Attendance = () => {
             </table>
           </div>
         )}
+      </div>
       </div>
     </div>
   );

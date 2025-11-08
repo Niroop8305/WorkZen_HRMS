@@ -270,6 +270,11 @@ const MyProfile = () => {
         newPassword: passwordForm.newPassword,
       });
 
+      console.log("Password change response:", response.data);
+
+      // Clear any previous errors
+      setPasswordErrors({});
+      
       setPasswordSuccess(
         response.data.message ||
           "Password updated successfully! A confirmation email has been sent."
@@ -284,6 +289,7 @@ const MyProfile = () => {
       });
     } catch (error) {
       console.error("Error changing password:", error);
+      console.error("Error response:", error.response);
       setPasswordErrors({
         general:
           error.response?.data?.message ||
@@ -1275,138 +1281,11 @@ const MyProfile = () => {
                 )}
               </div>
 
-              <div className="divider"></div>
-
-              {/* Change Password Section */}
-              <h4>Change Password</h4>
-              <p className="section-description">
-                Change your password if you know your current password
-              </p>
-
-              {/* Success Message */}
-              {passwordSuccess && (
-                <div className="password-success-message">
-                  <span className="success-icon">✓</span>
-                  {passwordSuccess}
-                </div>
-              )}
-
-              {/* General Error Message */}
-              {passwordErrors.general && (
-                <div className="password-error-message">
-                  <span className="error-icon">✗</span>
-                  {passwordErrors.general}
-                </div>
-              )}
-
-              {/* Password Change Form */}
-              <div className="password-form">
-                <div className="form-note">
-                  <strong>Note:</strong> User should receive a mail of their
-                  Login id and password.
-                  <br />
-                  <span className="note-author">Stunning Snail</span>
-                </div>
-
-                <div className="password-field-group">
-                  <label>Login Id:</label>
-                  <input
-                    type="text"
-                    name="loginId"
-                    className="password-input"
-                    value={passwordForm.loginId}
-                    readOnly
-                    placeholder="Current user login id should be automatically populated"
-                  />
-                  <p className="field-hint">
-                    Current user login id should be automatically populated.
-                  </p>
-                </div>
-
-                <div className="password-field-group">
-                  <label>Old Password:</label>
-                  <input
-                    type="password"
-                    name="oldPassword"
-                    className={`password-input ${
-                      passwordErrors.oldPassword ? "input-error" : ""
-                    }`}
-                    value={passwordForm.oldPassword}
-                    onChange={handlePasswordChange}
-                    placeholder="Enter your current password"
-                  />
-                  {passwordErrors.oldPassword && (
-                    <p className="field-error">{passwordErrors.oldPassword}</p>
-                  )}
-                </div>
-
-                <div className="password-field-group">
-                  <label>New Password:</label>
-                  <input
-                    type="password"
-                    name="newPassword"
-                    className={`password-input ${
-                      passwordErrors.newPassword ? "input-error" : ""
-                    }`}
-                    value={passwordForm.newPassword}
-                    onChange={handlePasswordChange}
-                    placeholder="Enter new password"
-                  />
-                  {passwordErrors.newPassword && (
-                    <p className="field-error">{passwordErrors.newPassword}</p>
-                  )}
-                  <p className="field-hint">
-                    Password must be at least 8 characters with uppercase,
-                    lowercase, number, and special character (!@#$%^&*)
-                  </p>
-                </div>
-
-                <div className="password-field-group">
-                  <label>Confirm Password:</label>
-                  <input
-                    type="password"
-                    name="confirmPassword"
-                    className={`password-input ${
-                      passwordErrors.confirmPassword ? "input-error" : ""
-                    }`}
-                    value={passwordForm.confirmPassword}
-                    onChange={handlePasswordChange}
-                    placeholder="Confirm new password"
-                  />
-                  {passwordErrors.confirmPassword && (
-                    <p className="field-error">
-                      {passwordErrors.confirmPassword}
-                    </p>
-                  )}
-                </div>
-
-                <div className="password-actions">
-                  <button
-                    className="btn btn-primary reset-password-btn"
-                    onClick={handlePasswordReset}
-                    disabled={passwordLoading}
-                  >
-                    {passwordLoading ? "Updating..." : "Reset Password"}
-                  </button>
-                </div>
-
-                <div className="password-management-note">
-                  <p>
-                    Make sure the employee receives the password through email
-                    or another digital method. The password change mechanism
-                    should be different for administrators and regular users.
-                  </p>
-                </div>
-              </div>
-
               {/* Admin Section - Only visible to Admin */}
               {user?.role === "Admin" && (
                 <div className="admin-password-section">
-                  <h4>BUG BUSTERS</h4>
-                  <p className="admin-note">For employees other than Admin.</p>
-                  <p className="admin-hint">
-                    Current user login id should be automatically populated.
-                  </p>
+                  <h4>Admin Note</h4>
+                  <p className="admin-note">Password reset via verification code is available for all users.</p>
                 </div>
               )}
             </div>

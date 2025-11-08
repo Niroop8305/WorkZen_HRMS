@@ -434,3 +434,79 @@ export const getEmployeeSalaryStructure = async (req, res) => {
     });
   }
 };
+
+// Get salary statement report for an employee
+export const getSalaryStatement = async (req, res) => {
+  try {
+    const { employee_id, year } = req.query;
+
+    if (!employee_id || !year) {
+      return res.status(400).json({
+        success: false,
+        message: 'Employee ID and year are required'
+      });
+    }
+
+    // Get all payroll records for the employee in the given year
+    const [payrollRecords] = await pool.query(
+      `SELECT 
+        p.month,
+        p.year,
+        p.gross_salary as basic_salary,
+        (SELECT COALESCE(SUM(pd.amount), 0)
+         FROM payroll_details pd
+         INNER JOIN salary_components sc ON pd.component_id = sc.component_id
+         WHERE pd.payroll_id = p.payroll_id AND sc.component_type = 'Earning'
+         AND sc.component_name != 'Basic Salary') as allowances,
+        p.total_deductions as deductions,
+        p.net_salary,
+        p.working_days,
+        p.present_days,
+        p.leave_days,
+        p.payment_status,
+        p.payment_date
+       FROM payroll p
+       WHERE p.user_id = ? AND p.year = ?
+       ORDER BY p.month`,
+      [employee_id, year]
+    );
+
+    // Get month names
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    const formattedRecords = payrollRecords.map(record => ({
+      month: monthNames[record.month - 1],
+      month_number: record.month,
+      basic_salary: parseFloat(record.basic_salary || 0),
+      allowances: parseFloat(record.allowances || 0),
+      deductions: parseFloat(record.deductions || 0),
+      net_salary: parseFloat(record.net_salary || 0),
+      working_days: record.working_days,
+      present_days: record.present_days,
+      leave_days: record.leave_days,
+      payment_status: record.payment_status,
+      payment_date: record.payment_date
+    }));
+
+    res.status(200).json({
+      success: true,
+      data: formattedRecords,
+      summary: {
+        total_basic_salary: formattedRecords.reduce((sum, r) => sum + r.basic_salary, 0),
+        total_allowances: formattedRecords.reduce((sum, r) => sum + r.allowances, 0),
+        total_deductions: formattedRecords.reduce((sum, r) => sum + r.deductions, 0),
+        total_net_salary: formattedRecords.reduce((sum, r) => sum + r.net_salary, 0)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching salary statement:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching salary statement',
+      error: error.message
+    });
+  }
+};

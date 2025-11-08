@@ -15,12 +15,50 @@
 }
 
 .attendance-page {
-  min-height: 100vh;
+  flex: 1;
   background: var(--bg-dark);
   color: var(--text-primary);
   display: flex;
   flex-direction: column;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  overflow-y: auto;
+}
+
+/* =====================================================
+   Attendance Header
+   ===================================================== */
+
+.attendance-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+  background: var(--bg-card);
+  border-bottom: 2px solid var(--border-color);
+}
+
+.header-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.btn-logout {
+  background: var(--primary-color);
+  border: none;
+  color: var(--text-primary);
+  padding: 10px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.btn-logout:hover {
+  background: var(--primary-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(113, 75, 103, 0.5);
 }
 
 /* =====================================================

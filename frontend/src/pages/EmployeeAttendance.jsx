@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import '../styles/App.css';
 import '../styles/EmployeeAttendance.css';
 
 function formatDateISO(date) {
@@ -16,11 +18,13 @@ function endOfMonth(date) {
 }
 
 const EmployeeAttendance = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const [date, setDate] = useState(() => new Date());
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [activeSection, setActiveSection] = useState('attendance');
   const [summary, setSummary] = useState({
     presentDays: 0,
     leavesCount: 0,
@@ -126,10 +130,66 @@ const EmployeeAttendance = () => {
     return `${year}-${month}`;
   };
 
+  const navItems = [
+    { id: 'employees', label: 'Employees', path: '/employee/dashboard' },
+    { id: 'attendance', label: 'Attendance', path: '/attendance' },
+    { id: 'timeoff', label: 'Time Off', path: null },
+    { id: 'payroll', label: 'Payroll', path: null },
+    { id: 'reports', label: 'Reports', path: '/reports' },
+    { id: 'settings', label: 'Settings', path: null },
+  ];
+
+  const handleNavClick = (item) => {
+    if (item.path) {
+      navigate(item.path);
+    } else {
+      setActiveSection(item.id);
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
-    <div className="employee-attendance-page">
-      {/* Navigation Bar */}
-      <div className="ea-nav-bar">
+    <div className="dashboard-layout">
+      {/* Left Sidebar Navigation */}
+      <aside className="dashboard-sidebar">
+        <div className="sidebar-header">
+          <div className="sidebar-company">
+            <img 
+              src="/odoo-logo.svg" 
+              alt="Company Logo" 
+              className="sidebar-logo"
+            />
+            <span className="company-name">{user?.profile?.company_name || 'Odoo India'}</span>
+          </div>
+        </div>
+
+        <nav className="sidebar-nav">
+          {navItems.map((item) => (
+            <button
+              key={item.id}
+              className={`nav-item ${activeSection === item.id ? 'active' : ''}`}
+              onClick={() => handleNavClick(item)}
+            >
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
+      </aside>
+
+      {/* Main Content */}
+      <div className="employee-attendance-page">
+        {/* Top Header */}
+        <div className="ea-header">
+          <div className="header-title">My Attendance</div>
+          <button className="btn-logout" onClick={handleLogout}>Logout</button>
+        </div>
+
+        {/* Navigation Bar */}
+        <div className="ea-nav-bar">
         <button className="ea-nav-btn" onClick={gotoPrevMonth}>←</button>
         <button className="ea-nav-btn" onClick={gotoNextMonth}>→</button>
         <input 
@@ -221,6 +281,7 @@ const EmployeeAttendance = () => {
           </table>
         </div>
       )}
+      </div>
     </div>
   );
 };

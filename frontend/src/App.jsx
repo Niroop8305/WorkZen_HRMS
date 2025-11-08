@@ -6,6 +6,7 @@ import {
 } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AttendanceRouter from "./components/AttendanceRouter";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import Dashboard from "./pages/Dashboard";
@@ -13,6 +14,9 @@ import MyProfile from "./pages/MyProfile";
 import Attendance from "./pages/Attendance";
 import EmployeeAttendance from "./pages/EmployeeAttendance";
 import TimeOff from "./pages/TimeOff";
+import Reports from "./pages/Reports";
+import PayrollPage from "./pages/PayrollPage";
+import PayrunDashboard from "./pages/PayrunDashboard";
 import "./styles/App.css";
 
 function App() {
@@ -22,7 +26,7 @@ function App() {
         <div className="app-container">
           <Routes>
             {/* Public Routes */}
-            <Route path="/" element={<Navigate to="/login" />} />
+            <Route path="/" element={<Navigate to="/payroll" />} />
             <Route path="/login" element={<SignIn />} />
             <Route path="/signup" element={<SignUp />} />
 
@@ -57,22 +61,24 @@ function App() {
               }
             />
 
-            {/* Attendance Route */}
+            {/* Attendance Route - Role-based routing */}
             <Route
               path="/attendance"
               element={
                 <ProtectedRoute>
-                  <Attendance />
+                  <AttendanceRouter />
                 </ProtectedRoute>
               }
             />
 
-            {/* Employee Attendance Route - Monthly View */}
+            {/* Reports Route - Admin and Payroll Officer only */}
             <Route
-              path="/employee/attendance"
+              path="/reports"
               element={
-                <ProtectedRoute>
-                  <EmployeeAttendance />
+                <ProtectedRoute
+                  allowedRoles={["Admin", "Payroll Officer"]}
+                >
+                  <Reports />
                 </ProtectedRoute>
               }
             />
@@ -86,6 +92,12 @@ function App() {
                 </ProtectedRoute>
               }
             />
+
+            {/* Payroll Page - Standalone (No protection for demo) */}
+            <Route path="/payroll" element={<PayrollPage />} />
+            
+            {/* Payrun Dashboard - Functional Payrun System */}
+            <Route path="/payrun" element={<PayrunDashboard />} />
 
             {/* Unauthorized Page */}
             <Route
@@ -111,6 +123,7 @@ function App() {
                 </div>
               }
             />
+
             {/* 404 Page */}
             <Route
               path="*"

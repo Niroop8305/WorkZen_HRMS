@@ -13,6 +13,9 @@ const Dashboard = () => {
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [attendanceStatus, setAttendanceStatus] = useState("not_checked_in");
+  const [attendanceData, setAttendanceData] = useState(null);
+  const [employeeAttendance, setEmployeeAttendance] = useState({});
   const profileMenuRef = useRef(null);
 
   const handleLogout = () => {
@@ -58,7 +61,98 @@ const Dashboard = () => {
   // Fetch employees from API
   useEffect(() => {
     fetchEmployees();
-  }, []);
+    fetchAttendanceStatus();
+    
+    // Refresh attendance status every 30 seconds
+    const interval = setInterval(() => {
+      fetchAttendanceStatus();
+      if (employees.length > 0) {
+        fetchAllEmployeesAttendance(employees);
+      }
+    }, 30000);
+    
+    return () => clearInterval(interval);
+  }, [employees.length]);
+
+  const fetchAttendanceStatus = async () => {
+    try {
+      const token = localStorage.getItem("workzen_token");
+      const response = await axios.get("http://localhost:5000/api/attendance/status", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setAttendanceStatus(response.data.data.status);
+      setAttendanceData(response.data.data);
+    } catch (error) {
+      console.error("Error fetching attendance status:", error);
+    }
+  };
+
+  const fetchAllEmployeesAttendance = async (employeeList) => {
+    try {
+      const token = localStorage.getItem("workzen_token");
+      const response = await axios.get(
+        "http://localhost:5000/api/attendance/all-status",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      if (response.data.success) {
+        // Map the attendance status: checked_in -> online, others -> offline
+        const attendanceMap = {};
+        Object.keys(response.data.data).forEach(userId => {
+          const status = response.data.data[userId];
+          attendanceMap[userId] = status === 'checked_in' ? 'online' : 'offline';
+        });
+        setEmployeeAttendance(attendanceMap);
+      }
+    } catch (error) {
+      console.error("Error fetching employees attendance:", error);
+      // Fallback to offline for all
+      const attendanceMap = {};
+      employeeList.forEach(emp => {
+        attendanceMap[emp.user_id] = 'offline';
+      });
+      setEmployeeAttendance(attendanceMap);
+    }
+  };
+
+  const handleCheckInOut = async () => {
+    try {
+      const token = localStorage.getItem("workzen_token");
+      const endpoint = attendanceStatus === "checked_in"
+        ? "/api/attendance/check-out"
+        : "/api/attendance/check-in";
+
+      const response = await axios.post(
+        `http://localhost:5000${endpoint}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        setAttendanceStatus(response.data.data.status);
+        setAttendanceData(response.data.data);
+        alert(response.data.message);
+        
+        // Refresh all employees' attendance status
+        if (employees.length > 0) {
+          await fetchAllEmployeesAttendance(employees);
+        }
+      }
+    } catch (error) {
+      console.error("Error during check-in/out:", error);
+      alert(error.response?.data?.message || "Failed to process attendance");
+    }
+  };
 
   const fetchEmployees = async () => {
     try {
@@ -69,7 +163,11 @@ const Dashboard = () => {
           Authorization: `Bearer ${token}`,
         },
       });
-      setEmployees(response.data.data || []);
+      const employeeList = response.data.data || [];
+      setEmployees(employeeList);
+      
+      // Fetch attendance for employees
+      await fetchAllEmployeesAttendance(employeeList);
     } catch (error) {
       console.error("Error fetching employees:", error);
       // If unauthorized, keep empty array
@@ -84,16 +182,17 @@ const Dashboard = () => {
     fetchEmployees();
   };
 
-  // Get user status (will be fetched from API in production)
-  const getUserStatus = () => {
-    // This would come from attendance/leave API
-    // For now, default to 'online' when logged in
-    return "online"; // Can be 'online', 'offline', or 'leave'
+  // Get user's attendance status for display
+  const getUserAttendanceStatus = () => {
+    if (attendanceStatus === "checked_in") {
+      return "online"; // Green dot - checked in
+    }
+    return "offline"; // Yellow dot - checked out or not checked in yet
   };
 
-  const userStatus = getUserStatus();
+  const userStatus = getUserAttendanceStatus();
 
-  // Render status indicator
+  // Render status indicator with tooltip
   const renderStatusIndicator = (status) => {
     if (status === "leave") {
       return <span className="status-icon status-leave">✈</span>;
@@ -101,14 +200,44 @@ const Dashboard = () => {
     return <span className={`status-dot status-${status}`}></span>;
   };
 
-  const navItems = [
-    { id: "employees", label: "Employees", hasSubItems: false },
-    { id: "attendance", label: "Attendance", hasSubItems: false },
-    { id: "timeoff", label: "Time Off", hasSubItems: false },
-    { id: "payroll", label: "Payroll", hasSubItems: false },
-    { id: "reports", label: "Reports", hasSubItems: false },
-    { id: "settings", label: "Settings", hasSubItems: false },
+  // Get status label for tooltip
+  const getStatusLabel = () => {
+    if (attendanceStatus === "checked_in") {
+      return "Checked In - Click to Check Out";
+    }
+    return "Not Checked In - Click to Check In";
+  };
+
+  // Get employee card status (for displaying in employee cards)
+  const getEmployeeStatus = (employee) => {
+    // Check if employee is on leave (you can add leave checking logic here)
+    // For now, we'll just return offline for all employees
+    // In production, you'd check their attendance status from the API
+    return employeeAttendance[employee.user_id] || 'offline';
+  };
+
+  // Define navigation items based on user role
+  const allNavItems = [
+    { id: "employees", label: "Employees", hasSubItems: false, path: null, roles: ["Admin", "HR Manager", "Payroll Officer"] },
+    { id: "attendance", label: "Attendance", hasSubItems: false, path: "/attendance", roles: ["Admin", "HR Manager", "Payroll Officer", "Employee"] },
+    { id: "timeoff", label: "Time Off", hasSubItems: false, path: null, roles: ["Admin", "HR Manager", "Payroll Officer", "Employee"] },
+    { id: "payroll", label: "Payroll", hasSubItems: false, path: null, roles: ["Admin", "HR Manager", "Payroll Officer", "Employee"] },
+    { id: "reports", label: "Reports", hasSubItems: false, path: null, roles: ["Admin", "HR Manager", "Payroll Officer"] },
+    { id: "settings", label: "Settings", hasSubItems: false, path: null, roles: ["Admin", "HR Manager", "Payroll Officer"] },
   ];
+
+  // Filter nav items based on user role
+  const navItems = allNavItems.filter(item => 
+    item.roles.includes(user?.role || user?.roleName || "Employee")
+  );
+
+  const handleNavClick = (item) => {
+    if (item.path) {
+      navigate(item.path);
+    } else {
+      setActiveSection(item.id);
+    }
+  };
 
   return (
     <div className="dashboard-layout">
@@ -134,7 +263,7 @@ const Dashboard = () => {
               className={`nav-item ${
                 activeSection === item.id ? "active" : ""
               }`}
-              onClick={() => setActiveSection(item.id)}
+              onClick={() => handleNavClick(item)}
             >
               <span>{item.label}</span>
               {item.hasSubItems && <span className="nav-arrow">▼</span>}
@@ -165,12 +294,13 @@ const Dashboard = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           <div className="header-right">
-            <div
+            <button
               className="btn-icon btn-status"
-              title={`Status: ${userStatus}`}
+              onClick={handleCheckInOut}
+              title={getStatusLabel()}
             >
               {renderStatusIndicator(userStatus)}
-            </div>
+            </button>
             <div className="profile-menu-container" ref={profileMenuRef}>
               <button
                 className="btn-icon btn-profile"
@@ -209,9 +339,7 @@ const Dashboard = () => {
             employees.map((employee) => (
               <div key={employee.user_id} className="employee-card">
                 <div className="employee-status-indicator">
-                  {renderStatusIndicator(
-                    employee.is_active ? "online" : "offline"
-                  )}
+                  {renderStatusIndicator(getEmployeeStatus(employee))}
                 </div>
                 <div className="employee-avatar">
                   <svg width="85" height="85" viewBox="0 0 85 85">

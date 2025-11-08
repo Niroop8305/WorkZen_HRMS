@@ -87,18 +87,19 @@ CREATE TABLE IF NOT EXISTS attendance (
     attendance_id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
     attendance_date DATE NOT NULL,
-    check_in_time TIME,
-    check_out_time TIME,
+    check_in_time DATETIME,
+    check_out_time DATETIME,
     total_hours DECIMAL(4,2),
     status ENUM('Present', 'Absent', 'Half-Day', 'Late', 'On Leave') DEFAULT 'Present',
     remarks TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    UNIQUE KEY unique_user_date (user_id, attendance_date),
     INDEX idx_user_date (user_id, attendance_date),
     INDEX idx_attendance_date (attendance_date),
-    INDEX idx_status (status)
+    INDEX idx_status (status),
+    INDEX idx_check_in (user_id, check_in_time),
+    INDEX idx_check_out (user_id, check_out_time)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =====================================================
@@ -279,6 +280,22 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     INDEX idx_user_action (user_id, action),
     INDEX idx_table_record (table_name, record_id),
     INDEX idx_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =====================================================
+-- 13. PASSWORD RESET CODES TABLE
+-- =====================================================
+CREATE TABLE IF NOT EXISTS password_reset_codes (
+    reset_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    reset_code VARCHAR(6) NOT NULL,
+    is_used BOOLEAN DEFAULT FALSE,
+    expires_at DATETIME NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_reset_code (reset_code),
+    INDEX idx_expires_at (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =====================================================

@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { User, Role } from '../models/userModel.js';
 import { EmployeeProfile } from '../models/profileModel.js';
+import { sendWelcomeEmail } from '../services/emailService.js';
 
 // Generate random password
 const generateRandomPassword = () => {
@@ -102,21 +103,36 @@ export const createUser = async (req, res) => {
       date_of_joining: new Date()
     });
 
-    // TODO: Send email with credentials (skipped for now)
-    // In production, send email with:
-    // - Email: email
-    // - Temporary Password: randomPassword
-    // - Instructions to change password on first login
+    // Prepare user details for email
+    const userDetails = {
+      email,
+      full_name: `${first_name} ${last_name || ''}`.trim(),
+      employee_code,
+      temporary_password: randomPassword,
+      role: role.role_name,
+      company_name: company_name || 'Odoo India'
+    };
+
+    // Send welcome email with credentials
+    const emailResult = await sendWelcomeEmail(userDetails);
+    
+    if (!emailResult.success) {
+      console.error('Failed to send welcome email:', emailResult.error);
+      // Don't fail the user creation if email fails, just log it
+    }
 
     res.status(201).json({
       success: true,
-      message: 'User created successfully',
+      message: emailResult.success 
+        ? 'User created successfully and welcome email sent' 
+        : 'User created successfully but email failed to send',
+      emailSent: emailResult.success,
       data: {
         userId,
         email,
         role: role.role_name,
         employee_code,
-        temporary_password: randomPassword, // In production, don't return this, only email it
+        temporary_password: randomPassword, // Still return for modal display
         full_name: `${first_name} ${last_name || ''}`.trim()
       }
     });
