@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import MyProfile from "./pages/MyProfile";
 import Attendance from "./pages/Attendance";
 import EmployeeAttendance from "./pages/EmployeeAttendance";
+import TimeOff from "./pages/TimeOff";
 import "./styles/App.css";
 
 function App() {
@@ -72,6 +73,16 @@ function App() {
               element={
                 <ProtectedRoute>
                   <EmployeeAttendance />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Time Off Route */}
+            <Route
+              path="/timeoff"
+              element={
+                <ProtectedRoute>
+                  <TimeOff />
                 </ProtectedRoute>
               }
             />
