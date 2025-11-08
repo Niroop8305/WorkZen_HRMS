@@ -1,11 +1,11 @@
-import pool from '../config/database.js';
+import pool from "../config/database.js";
 
 export const User = {
   // Create a new user
   create: async (userData) => {
     const { role_id, email, password_hash } = userData;
     const [result] = await pool.query(
-      'INSERT INTO users (role_id, email, password_hash) VALUES (?, ?, ?)',
+      "INSERT INTO users (role_id, email, password_hash) VALUES (?, ?, ?)",
       [role_id, email, password_hash]
     );
     return result.insertId;
@@ -38,14 +38,14 @@ export const User = {
   // Update last login
   updateLastLogin: async (userId) => {
     await pool.query(
-      'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE user_id = ?',
+      "UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE user_id = ?",
       [userId]
     );
   },
 
   // Get all users with profiles
   findAll: async () => {
-    const [rows] = await pool.query('SELECT * FROM view_user_details');
+    const [rows] = await pool.query("SELECT * FROM view_user_details");
     return rows;
   },
 
@@ -103,37 +103,43 @@ export const User = {
 
   // Update user status
   updateStatus: async (userId, isActive) => {
+    await pool.query("UPDATE users SET is_active = ? WHERE user_id = ?", [
+      isActive,
+      userId,
+    ]);
+  },
+
+  // Update user password
+  updatePassword: async (userId, newPasswordHash) => {
     await pool.query(
-      'UPDATE users SET is_active = ? WHERE user_id = ?',
-      [isActive, userId]
+      "UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP WHERE user_id = ?",
+      [newPasswordHash, userId]
     );
-  }
+  },
 };
 
 export const Role = {
   // Get all roles
   findAll: async () => {
-    const [rows] = await pool.query('SELECT * FROM roles');
+    const [rows] = await pool.query("SELECT * FROM roles");
     return rows;
   },
 
   // Find role by name
   findByName: async (roleName) => {
-    const [rows] = await pool.query(
-      'SELECT * FROM roles WHERE role_name = ?',
-      [roleName]
-    );
+    const [rows] = await pool.query("SELECT * FROM roles WHERE role_name = ?", [
+      roleName,
+    ]);
     return rows[0];
   },
 
   // Find role by ID
   findById: async (roleId) => {
-    const [rows] = await pool.query(
-      'SELECT * FROM roles WHERE role_id = ?',
-      [roleId]
-    );
+    const [rows] = await pool.query("SELECT * FROM roles WHERE role_id = ?", [
+      roleId,
+    ]);
     return rows[0];
-  }
+  },
 };
 
 export default { User, Role };
