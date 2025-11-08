@@ -1,0 +1,366 @@
+/* =====================================================
+   Reports Page Styles - Updated Nov 8, 2025 21:55
+   ===================================================== */
+
+/* Report Display */
+.report-display {
+  margin-top: 40px;
+  background: #000;
+  border: 2px solid #fff;
+  border-radius: 12px;
+  padding: 40px;
+}
+
+.report-content {
+  max-width: 900px;
+  margin: 0 auto;
+  color: #fff;
+}
+
+.employee-details-grid {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 30px;
+  gap: 40px;
+}
+
+.detail-column {
+  flex: 1;
+}
+
+.detail-item {
+  display: flex;
+  margin-bottom: 12px;
+  gap: 20px;
+}
+
+.detail-label {
+  color: #fff;
+  min-width: 180px;
+  font-size: 14px;
+}
+
+.detail-value {
+  color: #fff;
+  font-size: 14px;
+}
+
+.salary-components-section {
+  margin-top: 30px;
+}
+
+.components-table-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #fff;
+  margin-bottom: 10px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.components-table-header div {
+  flex: 1;
+  text-align: center;
+}
+
+.component-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #444;
+  font-size: 14px;
+}
+
+.component-row div {
+  flex: 1;
+  text-align: center;
+  color: #fff;
+}
+
+.component-row div:first-child {
+  text-align: left;
+  padding-left: 40px;
+}
+
+.net-salary-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.net-salary-row div {
+  flex: 1;
+  text-align: center;
+}
+
+.net-salary-row div:first-child {
+  text-align: left;
+}
+
+.report-actions {
+  margin-top: 40px;
+  text-align: center;
+  padding-top: 30px;
+  border-top: 2px solid #444;
+}
+
+.btn-download-pdf {
+  background: linear-gradient(135deg, #5dade2 0%, #4a9fd4 100%);
+  color: #fff;
+  border: none;
+  padding: 14px 40px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(93, 173, 226, 0.3);
+}
+
+.btn-download-pdf:hover {
+  background: linear-gradient(135deg, #4a9fd4 0%, #3b8ec5 100%);
+  box-shadow: 0 6px 20px rgba(93, 173, 226, 0.4);
+  transform: translateY(-2px);
+}
+
+.btn-download-pdf:active {
+  transform: translateY(0);
+}
+
+.reports-container {
+  padding: 40px;
+  background: #0f0f0f;
+  min-height: calc(100vh - 80px);
+}
+
+.report-card {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 0;
+  padding: 0;
+  max-width: 100%;
+  width: 100%;
+  box-shadow: none;
+}
+
+.report-header {
+  background: transparent;
+  padding: 30px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.report-title-section {
+  flex: 1;
+}
+
+.report-name {
+  font-size: 32px;
+  font-weight: 500;
+  color: #ffffff;
+  margin: 0;
+  text-shadow: none;
+}
+
+.btn-print {
+  background: #5dade2;
+  border: none;
+  color: #ffffff;
+  padding: 12px 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  transition: all 0.2s ease;
+  box-shadow: none;
+  margin-left: auto;
+}
+
+.btn-print:hover:not(:disabled) {
+  background: #7fc4ee;
+  transform: translateY(-2px);
+}
+
+.btn-print:disabled {
+  background: #3a3a3a;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.report-form {
+  padding: 40px;
+}
+
+.form-group {
+  margin-bottom: 30px;
+  display: flex;
+  flex-direction: column;
+  max-width: 500px;
+}
+
+.form-group label {
+  font-size: 15px;
+  font-weight: 400;
+  color: #ffffff;
+  margin-bottom: 8px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.form-select {
+  width: 100%;
+  background: #0f0f0f;
+  border: 1px solid #3a3a3a;
+  color: #ffffff;
+  padding: 12px 40px 12px 16px;
+  border-radius: 6px;
+  font-size: 15px;
+  cursor: pointer;
+  outline: none;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  transition: all 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 18px;
+}
+
+.form-select:hover {
+  border-color: #5dade2;
+  background-color: #1a1a1a;
+}
+
+.form-select:focus {
+  border-color: #5dade2;
+  background-color: #1a1a1a;
+  box-shadow: 0 0 0 3px rgba(93, 173, 226, 0.1);
+}
+
+.form-select option {
+  background: #1a1a1a;
+  color: #ffffff;
+  padding: 10px;
+}
+
+.error-message {
+  padding: 16px 20px;
+  background: rgba(244, 67, 54, 0.1);
+  border: 1px solid rgba(244, 67, 54, 0.3);
+  border-radius: 6px;
+  color: #ff6b6b;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 400;
+  margin-bottom: 20px;
+}
+
+.error-message span:first-child {
+  font-size: 18px;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+/* =====================================================
+   Responsive Design
+   ===================================================== */
+
+@media (max-width: 1024px) {
+  .reports-container {
+    padding: 30px;
+  }
+
+  .report-header {
+    padding: 25px 30px;
+  }
+
+  .report-form {
+    padding: 30px;
+  }
+}
+
+@media (max-width: 768px) {
+  .reports-container {
+    padding: 20px;
+  }
+
+  .report-header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px;
+  }
+
+  .report-logo {
+    width: 80px;
+    height: 80px;
+    font-size: 16px;
+  }
+
+  .btn-print {
+    width: 100%;
+    margin-left: 0;
+    margin-top: 15px;
+  }
+
+  .report-form {
+    padding: 20px;
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .reports-container {
+    padding: 15px;
+  }
+
+  .report-header {
+    padding: 15px;
+  }
+
+  .report-logo {
+    width: 60px;
+    height: 60px;
+    font-size: 14px;
+  }
+
+  .report-name {
+    font-size: 20px;
+  }
+
+  .report-type {
+    font-size: 14px;
+  }
+
+  .report-form {
+    padding: 15px;
+  }
+
+  .form-group label {
+    font-size: 14px;
+  }
+
+  .form-select {
+    font-size: 14px;
+  }
+
+  .btn-print {
+    padding: 10px 24px;
+    font-size: 14px;
+  }
+}

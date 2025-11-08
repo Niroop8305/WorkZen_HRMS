@@ -8,6 +8,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "init-db": "node src/database/init.js",
+    "init-payroll": "node src/database/init_payroll.js",
     "test:email": "node src/config/test-email.js",
     "setup:email": "node scripts/setup-email.js"
   },

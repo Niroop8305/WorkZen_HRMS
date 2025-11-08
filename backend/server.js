@@ -8,6 +8,8 @@ import userRoutes from './src/routes/userRoutes.js';
 import attendanceRoutes from './src/routes/attendanceRoutes.js';
 import leaveRoutes from './src/routes/leaveRoutes.js';
 import payrollRoutes from './src/routes/payrollRoutes.js';
+import payrunRoutes from './src/routes/payrunRoutes.js';
+import payslipRoutes from './src/routes/payslipRoutes.js';
 import dashboardRoutes from './src/routes/dashboardRoutes.js';
 import emailRoutes from './src/routes/emailRoutes.js';
 import { errorHandler } from './src/middleware/errorHandler.js';
@@ -45,6 +47,8 @@ app.use('/api/users', userRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/leave', leaveRoutes);
 app.use('/api/payroll', payrollRoutes);
+app.use('/api/payrun', payrunRoutes);
+app.use('/api/payslip', payslipRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/email', emailRoutes);
 

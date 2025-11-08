@@ -150,7 +150,7 @@ const Attendance = () => {
     { id: 'attendance', label: 'Attendance', path: '/attendance' },
     { id: 'timeoff', label: 'Time Off', path: null },
     { id: 'payroll', label: 'Payroll', path: null },
-    { id: 'reports', label: 'Reports', path: null },
+    { id: 'reports', label: 'Reports', path: '/reports' },
     { id: 'settings', label: 'Settings', path: null },
   ];
 
