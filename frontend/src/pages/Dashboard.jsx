@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import CreateUserModal from "../components/CreateUserModal";
+import EmployeeDetailsModal from "../components/EmployeeDetailsModal";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 
@@ -13,6 +14,8 @@ const Dashboard = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
+  const [showEmployeeDetails, setShowEmployeeDetails] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [attendanceStatus, setAttendanceStatus] = useState("not_checked_in");
@@ -218,6 +221,16 @@ const Dashboard = () => {
     fetchEmployees();
   };
 
+  const handleEmployeeCardClick = (employee) => {
+    setSelectedEmployee(employee);
+    setShowEmployeeDetails(true);
+  };
+
+  const handleCloseEmployeeDetails = () => {
+    setShowEmployeeDetails(false);
+    setSelectedEmployee(null);
+  };
+
   // Get user's attendance status for display
   const getUserAttendanceStatus = () => {
     if (attendanceStatus === "checked_in") {
@@ -383,7 +396,12 @@ const Dashboard = () => {
             <div className="no-data-message">No employees found</div>
           ) : (
             employees.map((employee) => (
-              <div key={employee.user_id} className="employee-card">
+              <div
+                key={employee.user_id}
+                className="employee-card"
+                onClick={() => handleEmployeeCardClick(employee)}
+                style={{ cursor: "pointer" }}
+              >
                 <div className="employee-status-indicator">
                   {renderStatusIndicator(getEmployeeStatus(employee))}
                 </div>
@@ -417,6 +435,13 @@ const Dashboard = () => {
           isOpen={showCreateUserModal}
           onClose={() => setShowCreateUserModal(false)}
           onUserCreated={handleUserCreated}
+        />
+
+        {/* Employee Details Modal */}
+        <EmployeeDetailsModal
+          isOpen={showEmployeeDetails}
+          onClose={handleCloseEmployeeDetails}
+          employee={selectedEmployee}
         />
       </main>
     </div>

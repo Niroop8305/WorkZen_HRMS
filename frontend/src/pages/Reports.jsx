@@ -103,7 +103,10 @@ const Reports = () => {
 
       // Show the report inline
       setReportData(response.data.data);
-      setEmployeeData(response.data.employee || employees.find(e => e.emp_id === selectedEmployee));
+      setEmployeeData(
+        response.data.employee ||
+          employees.find((e) => e.emp_id === selectedEmployee)
+      );
       setShowReport(true);
     } catch (err) {
       console.error("Error generating report:", err);
@@ -116,7 +119,8 @@ const Reports = () => {
   const handleDownloadPDF = () => {
     if (!reportData) return;
 
-    const employee = employeeData || employees.find((e) => e.emp_id == selectedEmployee);
+    const employee =
+      employeeData || employees.find((e) => e.emp_id == selectedEmployee);
 
     // Get the report display element that's already rendered on the page
     const reportElement = document.querySelector(".report-display");
@@ -521,7 +525,8 @@ const Reports = () => {
 
               <div className="form-group">
                 <label htmlFor="employee-select">
-                  Employee Name: {employees.length > 0 && `(${employees.length} employees)`}
+                  Employee Name:{" "}
+                  {employees.length > 0 && `(${employees.length} employees)`}
                 </label>
                 <select
                   id="employee-select"
@@ -534,7 +539,9 @@ const Reports = () => {
                 >
                   <option value="">-- Select Employee --</option>
                   {employees.length === 0 ? (
-                    <option value="" disabled>Loading employees...</option>
+                    <option value="" disabled>
+                      Loading employees...
+                    </option>
                   ) : (
                     employees.map((emp) => (
                       <option key={emp.emp_id} value={emp.emp_id}>
@@ -616,7 +623,9 @@ const Reports = () => {
                     <div className="detail-item">
                       <span className="detail-label">Designation</span>
                       <span className="detail-value">
-                        {employeeData?.designation || employeeData?.role_name || "Employee"}
+                        {employeeData?.designation ||
+                          employeeData?.role_name ||
+                          "Employee"}
                       </span>
                     </div>
                   </div>
@@ -624,9 +633,11 @@ const Reports = () => {
                     <div className="detail-item">
                       <span className="detail-label">Date Of Joining</span>
                       <span className="detail-value">
-                        {employeeData?.date_of_joining || employeeData?.created_at
+                        {employeeData?.date_of_joining ||
+                        employeeData?.created_at
                           ? new Date(
-                              employeeData?.date_of_joining || employeeData?.created_at
+                              employeeData?.date_of_joining ||
+                                employeeData?.created_at
                             ).toLocaleDateString("en-IN")
                           : "N/A"}
                       </span>
@@ -636,9 +647,11 @@ const Reports = () => {
                         Salary Effective From
                       </span>
                       <span className="detail-value">
-                        {employeeData?.date_of_joining || employeeData?.created_at
+                        {employeeData?.date_of_joining ||
+                        employeeData?.created_at
                           ? new Date(
-                              employeeData?.date_of_joining || employeeData?.created_at
+                              employeeData?.date_of_joining ||
+                                employeeData?.created_at
                             ).toLocaleDateString("en-IN")
                           : "N/A"}
                       </span>
