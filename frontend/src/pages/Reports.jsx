@@ -21,6 +21,7 @@ const Reports = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [reportData, setReportData] = useState(null);
+  const [employeeData, setEmployeeData] = useState(null);
   const [showReport, setShowReport] = useState(false);
 
   // Check if user has access to Reports
@@ -42,14 +43,19 @@ const Reports = () => {
   const fetchEmployees = async () => {
     try {
       const token = localStorage.getItem("workzen_token");
-      const response = await api.get("/users", {
+      // Fetch payroll employees for salary statement report
+      const response = await api.get("/employees", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      setEmployees(response.data.data || []);
+      console.log("Employees API Response:", response.data);
+      const employeesList = response.data.data || [];
+      console.log("Employees List:", employeesList);
+      setEmployees(employeesList);
     } catch (error) {
       console.error("Error fetching employees:", error);
+      console.error("Error details:", error.response?.data);
       setError("Failed to load employees");
     }
   };
@@ -97,6 +103,7 @@ const Reports = () => {
 
       // Show the report inline
       setReportData(response.data.data);
+      setEmployeeData(response.data.employee || employees.find(e => e.emp_id === selectedEmployee));
       setShowReport(true);
     } catch (err) {
       console.error("Error generating report:", err);
@@ -109,7 +116,7 @@ const Reports = () => {
   const handleDownloadPDF = () => {
     if (!reportData) return;
 
-    const employee = employees.find((e) => e.user_id == selectedEmployee);
+    const employee = employeeData || employees.find((e) => e.emp_id == selectedEmployee);
 
     // Get the report display element that's already rendered on the page
     const reportElement = document.querySelector(".report-display");
@@ -123,7 +130,7 @@ const Reports = () => {
     const opt = {
       margin: [10, 10, 10, 10],
       filename: `Salary_Statement_${
-        employee?.full_name || "Employee"
+        employee?.name || employee?.full_name || "Employee"
       }_${selectedYear}.pdf`,
       image: { type: "jpeg", quality: 0.98 },
       html2canvas: {
@@ -513,7 +520,9 @@ const Reports = () => {
               )}
 
               <div className="form-group">
-                <label htmlFor="employee-select">Employee Name :</label>
+                <label htmlFor="employee-select">
+                  Employee Name: {employees.length > 0 && `(${employees.length} employees)`}
+                </label>
                 <select
                   id="employee-select"
                   className="form-select"
@@ -523,13 +532,16 @@ const Reports = () => {
                     setError(null);
                   }}
                 >
-                  <option value=""></option>
-                  {employees.map((emp) => (
-                    <option key={emp.user_id} value={emp.user_id}>
-                      {emp.full_name || emp.email}{" "}
-                      {emp.employee_code ? `(${emp.employee_code})` : ""}
-                    </option>
-                  ))}
+                  <option value="">-- Select Employee --</option>
+                  {employees.length === 0 ? (
+                    <option value="" disabled>Loading employees...</option>
+                  ) : (
+                    employees.map((emp) => (
+                      <option key={emp.emp_id} value={emp.emp_id}>
+                        {emp.name} ({emp.emp_id})
+                      </option>
+                    ))
+                  )}
                 </select>
               </div>
 
@@ -598,15 +610,13 @@ const Reports = () => {
                     <div className="detail-item">
                       <span className="detail-label">Employee Name</span>
                       <span className="detail-value">
-                        {employees.find((e) => e.user_id == selectedEmployee)
-                          ?.full_name || "N/A"}
+                        {employeeData?.name || employeeData?.full_name || "N/A"}
                       </span>
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">Designation</span>
                       <span className="detail-value">
-                        {employees.find((e) => e.user_id == selectedEmployee)
-                          ?.role_name || "N/A"}
+                        {employeeData?.designation || employeeData?.role_name || "Employee"}
                       </span>
                     </div>
                   </div>
@@ -614,12 +624,9 @@ const Reports = () => {
                     <div className="detail-item">
                       <span className="detail-label">Date Of Joining</span>
                       <span className="detail-value">
-                        {employees.find((e) => e.user_id == selectedEmployee)
-                          ?.created_at
+                        {employeeData?.date_of_joining || employeeData?.created_at
                           ? new Date(
-                              employees.find(
-                                (e) => e.user_id == selectedEmployee
-                              ).created_at
+                              employeeData?.date_of_joining || employeeData?.created_at
                             ).toLocaleDateString("en-IN")
                           : "N/A"}
                       </span>
@@ -629,12 +636,9 @@ const Reports = () => {
                         Salary Effective From
                       </span>
                       <span className="detail-value">
-                        {employees.find((e) => e.user_id == selectedEmployee)
-                          ?.created_at
+                        {employeeData?.date_of_joining || employeeData?.created_at
                           ? new Date(
-                              employees.find(
-                                (e) => e.user_id == selectedEmployee
-                              ).created_at
+                              employeeData?.date_of_joining || employeeData?.created_at
                             ).toLocaleDateString("en-IN")
                           : "N/A"}
                       </span>

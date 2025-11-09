@@ -11,7 +11,7 @@ class EmployeeController {
       res.status(200).json({
         success: true,
         count: employees.length,
-        employees,
+        data: employees,
       });
     } catch (error) {
       console.error("Error fetching employees:", error);
