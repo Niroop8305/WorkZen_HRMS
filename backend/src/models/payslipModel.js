@@ -1,4 +1,4 @@
-import pool from '../config/database.js';
+import pool from "../config/database.js";
 
 class PayslipModel {
   // Create new payslip
@@ -20,11 +20,11 @@ class PayslipModel {
       present_days,
       paid_leaves,
       unpaid_leaves,
-      status
+      status,
     } = payslipData;
 
     const [result] = await pool.query(
-      `INSERT INTO payslips 
+      `INSERT INTO payroll_payslips 
       (emp_id, payrun_id, month, year, basic_salary, hra, earned_salary, gross_salary, 
        pf_deduction, tax_deduction, unpaid_deduction, total_deductions, net_salary,
        present_days, paid_leaves, unpaid_leaves, status) 
@@ -42,9 +42,23 @@ class PayslipModel {
       unpaid_leaves = VALUES(unpaid_leaves),
       status = VALUES(status)`,
       [
-        emp_id, payrun_id, month, year, basic_salary, hra, earned_salary, gross_salary,
-        pf_deduction, tax_deduction, unpaid_deduction, total_deductions, net_salary,
-        present_days, paid_leaves, unpaid_leaves, status || 'Done'
+        emp_id,
+        payrun_id,
+        month,
+        year,
+        basic_salary,
+        hra,
+        earned_salary,
+        gross_salary,
+        pf_deduction,
+        tax_deduction,
+        unpaid_deduction,
+        total_deductions,
+        net_salary,
+        present_days,
+        paid_leaves,
+        unpaid_leaves,
+        status || "Done",
       ]
     );
     return result.insertId;
@@ -54,8 +68,8 @@ class PayslipModel {
   static async getPayslipById(id) {
     const [rows] = await pool.query(
       `SELECT p.*, e.name as employee_name, e.emp_id as employee_id
-       FROM payslips p
-       JOIN employees e ON p.emp_id = e.id
+       FROM payroll_payslips p
+       JOIN payroll_employees e ON p.emp_id = e.id
        WHERE p.id = ?`,
       [id]
     );
@@ -66,8 +80,8 @@ class PayslipModel {
   static async getPayslipsByPayrunId(payrunId) {
     const [rows] = await pool.query(
       `SELECT p.*, e.name as employee_name, e.emp_id as employee_id
-       FROM payslips p
-       JOIN employees e ON p.emp_id = e.id
+       FROM payroll_payslips p
+       JOIN payroll_employees e ON p.emp_id = e.id
        WHERE p.payrun_id = ?
        ORDER BY e.name`,
       [payrunId]
@@ -79,8 +93,8 @@ class PayslipModel {
   static async getPayslipsByPeriod(month, year) {
     const [rows] = await pool.query(
       `SELECT p.*, e.name as employee_name, e.emp_id as employee_id
-       FROM payslips p
-       JOIN employees e ON p.emp_id = e.id
+       FROM payroll_payslips p
+       JOIN payroll_employees e ON p.emp_id = e.id
        WHERE p.month = ? AND p.year = ?
        ORDER BY e.name`,
       [month, year]
@@ -92,8 +106,8 @@ class PayslipModel {
   static async getPayslipByEmployeeAndPayrun(empId, payrunId) {
     const [rows] = await pool.query(
       `SELECT p.*, e.name as employee_name, e.emp_id as employee_id
-       FROM payslips p
-       JOIN employees e ON p.emp_id = e.id
+       FROM payroll_payslips p
+       JOIN payroll_employees e ON p.emp_id = e.id
        WHERE p.emp_id = ? AND p.payrun_id = ?`,
       [empId, payrunId]
     );
@@ -102,7 +116,10 @@ class PayslipModel {
 
   // Delete payslip
   static async deletePayslip(id) {
-    const [result] = await pool.query('DELETE FROM payslips WHERE id = ?', [id]);
+    const [result] = await pool.query(
+      "DELETE FROM payroll_payslips WHERE id = ?",
+      [id]
+    );
     return result.affectedRows;
   }
 }

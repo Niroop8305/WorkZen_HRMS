@@ -125,7 +125,7 @@ export const runPayrun = async (req, res) => {
         month,
         year,
         ...salaryDetails,
-        status: 'Pending'
+        status: 'Done'
       };
 
       const payslipId = await PayslipModel.createPayslip(payslipData);
@@ -135,7 +135,7 @@ export const runPayrun = async (req, res) => {
         employee_name: employee.name,
         employee_id: employee.emp_id,
         ...salaryDetails,
-        status: 'Pending'
+        status: 'Done'
       });
 
       totalCost += salaryDetails.net_salary;

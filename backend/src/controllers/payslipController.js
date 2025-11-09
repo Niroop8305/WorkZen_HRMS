@@ -1,4 +1,4 @@
-import pool from '../config/database.js';
+import pool from "../config/database.js";
 
 class PayslipController {
   // 1. Create New Payslip (Draft)
@@ -9,41 +9,41 @@ class PayslipController {
     if (!emp_id || !month || !year) {
       return res.status(400).json({
         success: false,
-        message: 'emp_id, month, and year are required'
+        message: "emp_id, month, and year are required",
       });
     }
 
     try {
       // Check if employee exists
       const [employee] = await pool.query(
-        'SELECT id, name, emp_id, basic_salary FROM employees WHERE id = ?',
+        "SELECT id, name, emp_id, basic_salary FROM payroll_employees WHERE id = ?",
         [emp_id]
       );
 
       if (employee.length === 0) {
         return res.status(404).json({
           success: false,
-          message: 'Employee not found'
+          message: "Employee not found",
         });
       }
 
       // Check if payslip already exists
       const [existingPayslip] = await pool.query(
-        'SELECT id, status FROM payslips WHERE emp_id = ? AND month = ? AND year = ?',
+        "SELECT id, status FROM payroll_payslips WHERE emp_id = ? AND month = ? AND year = ?",
         [emp_id, month, year]
       );
 
       if (existingPayslip.length > 0) {
         return res.status(409).json({
           success: false,
-          message: 'Payslip already exists for this employee and period',
-          payslip: existingPayslip[0]
+          message: "Payslip already exists for this employee and period",
+          payslip: existingPayslip[0],
         });
       }
 
       // Create draft payslip
       const [result] = await pool.query(
-        `INSERT INTO payslips (emp_id, month, year, basic_salary, status) 
+        `INSERT INTO payroll_payslips (emp_id, month, year, basic_salary, status) 
          VALUES (?, ?, ?, ?, 'Draft')`,
         [emp_id, month, year, employee[0].basic_salary]
       );
@@ -53,50 +53,51 @@ class PayslipController {
       // Fetch created payslip
       const [newPayslip] = await pool.query(
         `SELECT p.*, e.name as employee_name, e.emp_id as employee_code 
-         FROM payslips p 
-         JOIN employees e ON p.emp_id = e.id 
+         FROM payroll_payslips p 
+         JOIN payroll_employees e ON p.emp_id = e.id 
          WHERE p.id = ?`,
         [payslipId]
       );
 
       res.status(201).json({
         success: true,
-        message: 'Draft payslip created successfully',
-        payslip: newPayslip[0]
+        message: "Draft payslip created successfully",
+        payslip: newPayslip[0],
       });
     } catch (error) {
-      console.error('Error creating payslip:', error);
+      console.error("Error creating payslip:", error);
       res.status(500).json({
         success: false,
-        message: 'Failed to create payslip',
-        error: error.message
+        message: "Failed to create payslip",
+        error: error.message,
       });
     }
   }
 
   // 2. Compute Salary
   static async computeSalary(req, res) {
-    const { emp_id, month, year, present_days, paid_leaves, unpaid_leaves } = req.body;
+    const { emp_id, month, year, present_days, paid_leaves, unpaid_leaves } =
+      req.body;
 
     // Validation
     if (!emp_id || !month || !year || present_days === undefined) {
       return res.status(400).json({
         success: false,
-        message: 'emp_id, month, year, and present_days are required'
+        message: "emp_id, month, year, and present_days are required",
       });
     }
 
     try {
       // Fetch employee details
       const [employee] = await pool.query(
-        'SELECT id, name, emp_id, basic_salary, hra, pf_rate FROM employees WHERE id = ?',
+        "SELECT id, name, emp_id, basic_salary, hra, pf_rate FROM payroll_employees WHERE id = ?",
         [emp_id]
       );
 
       if (employee.length === 0) {
         return res.status(404).json({
           success: false,
-          message: 'Employee not found'
+          message: "Employee not found",
         });
       }
 
@@ -114,7 +115,7 @@ class PayslipController {
       const earnedSalary = perDayRate * earnedDays;
 
       // Calculate HRA (20% of earned salary)
-      const hra = earnedSalary * 0.20;
+      const hra = earnedSalary * 0.2;
 
       // Calculate gross salary
       const grossSalary = earnedSalary + hra;
@@ -148,20 +149,20 @@ class PayslipController {
         tax_deduction: parseFloat(taxDeduction.toFixed(2)),
         unpaid_deduction: parseFloat(unpaidDeduction.toFixed(2)),
         total_deductions: parseFloat(totalDeductions.toFixed(2)),
-        net_salary: parseFloat(netSalary.toFixed(2))
+        net_salary: parseFloat(netSalary.toFixed(2)),
       };
 
       res.status(200).json({
         success: true,
-        message: 'Salary computed successfully',
-        computation
+        message: "Salary computed successfully",
+        computation,
       });
     } catch (error) {
-      console.error('Error computing salary:', error);
+      console.error("Error computing salary:", error);
       res.status(500).json({
         success: false,
-        message: 'Failed to compute salary',
-        error: error.message
+        message: "Failed to compute salary",
+        error: error.message,
       });
     }
   }
@@ -181,34 +182,34 @@ class PayslipController {
       net_salary,
       present_days,
       paid_leaves,
-      unpaid_leaves
+      unpaid_leaves,
     } = req.body;
 
     // Validation
     if (!id) {
       return res.status(400).json({
         success: false,
-        message: 'Payslip ID is required'
+        message: "Payslip ID is required",
       });
     }
 
     try {
       // Check if payslip exists
       const [existingPayslip] = await pool.query(
-        'SELECT id, status FROM payslips WHERE id = ?',
+        "SELECT id, status FROM payroll_payslips WHERE id = ?",
         [id]
       );
 
       if (existingPayslip.length === 0) {
         return res.status(404).json({
           success: false,
-          message: 'Payslip not found'
+          message: "Payslip not found",
         });
       }
 
       // Update payslip with computed values
       await pool.query(
-        `UPDATE payslips 
+        `UPDATE payroll_payslips 
          SET basic_salary = ?, hra = ?, earned_salary = ?, gross_salary = ?,
              pf_deduction = ?, tax_deduction = ?, unpaid_deduction = ?,
              total_deductions = ?, net_salary = ?,
@@ -216,34 +217,42 @@ class PayslipController {
              status = 'Done'
          WHERE id = ?`,
         [
-          basic_salary, hra, earned_salary, gross_salary,
-          pf_deduction, tax_deduction, unpaid_deduction,
-          total_deductions, net_salary,
-          present_days, paid_leaves, unpaid_leaves,
-          id
+          basic_salary,
+          hra,
+          earned_salary,
+          gross_salary,
+          pf_deduction,
+          tax_deduction,
+          unpaid_deduction,
+          total_deductions,
+          net_salary,
+          present_days,
+          paid_leaves,
+          unpaid_leaves,
+          id,
         ]
       );
 
       // Fetch updated payslip
       const [updatedPayslip] = await pool.query(
         `SELECT p.*, e.name as employee_name, e.emp_id as employee_code 
-         FROM payslips p 
-         JOIN employees e ON p.emp_id = e.id 
+         FROM payroll_payslips p 
+         JOIN payroll_employees e ON p.emp_id = e.id 
          WHERE p.id = ?`,
         [id]
       );
 
       res.status(200).json({
         success: true,
-        message: 'Payslip saved successfully',
-        payslip: updatedPayslip[0]
+        message: "Payslip saved successfully",
+        payslip: updatedPayslip[0],
       });
     } catch (error) {
-      console.error('Error saving payslip:', error);
+      console.error("Error saving payslip:", error);
       res.status(500).json({
         success: false,
-        message: 'Failed to save payslip',
-        error: error.message
+        message: "Failed to save payslip",
+        error: error.message,
       });
     }
   }
@@ -255,8 +264,8 @@ class PayslipController {
     try {
       const [payslip] = await pool.query(
         `SELECT p.*, e.name as employee_name, e.emp_id as employee_code, e.basic_salary as emp_basic_salary
-         FROM payslips p 
-         JOIN employees e ON p.emp_id = e.id 
+         FROM payroll_payslips p 
+         JOIN payroll_employees e ON p.emp_id = e.id 
          WHERE p.id = ?`,
         [id]
       );
@@ -264,20 +273,20 @@ class PayslipController {
       if (payslip.length === 0) {
         return res.status(404).json({
           success: false,
-          message: 'Payslip not found'
+          message: "Payslip not found",
         });
       }
 
       res.status(200).json({
         success: true,
-        payslip: payslip[0]
+        payslip: payslip[0],
       });
     } catch (error) {
-      console.error('Error fetching payslip:', error);
+      console.error("Error fetching payslip:", error);
       res.status(500).json({
         success: false,
-        message: 'Failed to fetch payslip',
-        error: error.message
+        message: "Failed to fetch payslip",
+        error: error.message,
       });
     }
   }
@@ -289,38 +298,38 @@ class PayslipController {
     try {
       // Check if payslip exists
       const [payslip] = await pool.query(
-        'SELECT id, status FROM payslips WHERE id = ?',
+        "SELECT id, status FROM payroll_payslips WHERE id = ?",
         [id]
       );
 
       if (payslip.length === 0) {
         return res.status(404).json({
           success: false,
-          message: 'Payslip not found'
+          message: "Payslip not found",
         });
       }
 
       // Only allow deletion of Draft payslips
-      if (payslip[0].status !== 'Draft') {
+      if (payslip[0].status !== "Draft") {
         return res.status(403).json({
           success: false,
-          message: 'Only draft payslips can be deleted'
+          message: "Only draft payslips can be deleted",
         });
       }
 
       // Delete payslip
-      await pool.query('DELETE FROM payslips WHERE id = ?', [id]);
+      await pool.query("DELETE FROM payroll_payslips WHERE id = ?", [id]);
 
       res.status(200).json({
         success: true,
-        message: 'Payslip deleted successfully'
+        message: "Payslip deleted successfully",
       });
     } catch (error) {
-      console.error('Error deleting payslip:', error);
+      console.error("Error deleting payslip:", error);
       res.status(500).json({
         success: false,
-        message: 'Failed to delete payslip',
-        error: error.message
+        message: "Failed to delete payslip",
+        error: error.message,
       });
     }
   }
@@ -332,47 +341,47 @@ class PayslipController {
     try {
       let query = `
         SELECT p.*, e.name as employee_name, e.emp_id as employee_code 
-        FROM payslips p 
-        JOIN employees e ON p.emp_id = e.id 
+        FROM payroll_payslips p 
+        JOIN payroll_employees e ON p.emp_id = e.id 
         WHERE 1=1
       `;
       const params = [];
 
       if (month) {
-        query += ' AND p.month = ?';
+        query += " AND p.month = ?";
         params.push(month);
       }
 
       if (year) {
-        query += ' AND p.year = ?';
+        query += " AND p.year = ?";
         params.push(year);
       }
 
       if (emp_id) {
-        query += ' AND p.emp_id = ?';
+        query += " AND p.emp_id = ?";
         params.push(emp_id);
       }
 
       if (status) {
-        query += ' AND p.status = ?';
+        query += " AND p.status = ?";
         params.push(status);
       }
 
-      query += ' ORDER BY p.created_at DESC';
+      query += " ORDER BY p.created_at DESC";
 
       const [payslips] = await pool.query(query, params);
 
       res.status(200).json({
         success: true,
         count: payslips.length,
-        payslips
+        payslips,
       });
     } catch (error) {
-      console.error('Error fetching payslips:', error);
+      console.error("Error fetching payslips:", error);
       res.status(500).json({
         success: false,
-        message: 'Failed to fetch payslips',
-        error: error.message
+        message: "Failed to fetch payslips",
+        error: error.message,
       });
     }
   }
@@ -384,58 +393,58 @@ class PayslipController {
     try {
       // Check if payslip exists
       const [payslip] = await pool.query(
-        'SELECT id, status FROM payslips WHERE id = ?',
+        "SELECT id, status FROM payroll_payslips WHERE id = ?",
         [id]
       );
 
       if (payslip.length === 0) {
         return res.status(404).json({
           success: false,
-          message: 'Payslip not found'
+          message: "Payslip not found",
         });
       }
 
       // Check if already validated
-      if (payslip[0].status === 'Done') {
+      if (payslip[0].status === "Done") {
         return res.status(400).json({
           success: false,
-          message: 'Payslip is already validated'
+          message: "Payslip is already validated",
         });
       }
 
       // Update status to Done
       const [result] = await pool.query(
-        'UPDATE payslips SET status = ?, updated_at = NOW() WHERE id = ?',
-        ['Done', id]
+        "UPDATE payroll_payslips SET status = ?, updated_at = NOW() WHERE id = ?",
+        ["Done", id]
       );
 
       if (result.affectedRows === 0) {
         return res.status(500).json({
           success: false,
-          message: 'Failed to validate payslip'
+          message: "Failed to validate payslip",
         });
       }
 
       // Fetch updated payslip
       const [updatedPayslip] = await pool.query(
         `SELECT p.*, e.name as employee_name, e.emp_id as employee_id
-         FROM payslips p
-         JOIN employees e ON p.emp_id = e.id
+         FROM payroll_payslips p
+         JOIN payroll_employees e ON p.emp_id = e.id
          WHERE p.id = ?`,
         [id]
       );
 
       res.status(200).json({
         success: true,
-        message: 'Payslip validated successfully',
-        payslip: updatedPayslip[0]
+        message: "Payslip validated successfully",
+        payslip: updatedPayslip[0],
       });
     } catch (error) {
-      console.error('Error validating payslip:', error);
+      console.error("Error validating payslip:", error);
       res.status(500).json({
         success: false,
-        message: 'Failed to validate payslip',
-        error: error.message
+        message: "Failed to validate payslip",
+        error: error.message,
       });
     }
   }
