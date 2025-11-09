@@ -1,12 +1,13 @@
-import EmployeeModel from '../models/employeeModel.js';
-import AttendanceModel from '../models/attendanceModel.js';
-import PayslipModel from '../models/payslipModel.js';
-import PayrunModel from '../models/payrunModel.js';
+import EmployeeModel from "../models/employeeModel.js";
+import AttendanceModel from "../models/attendanceModel.js";
+import PayslipModel from "../models/payslipModel.js";
+import PayrunModel from "../models/payrunModel.js";
 
 // Salary Calculation Function
 function calculateSalary(employee, attendance) {
   const { basic_salary, hra, pf_rate, tax_rate } = employee;
-  const { present_days, paid_leaves, unpaid_leaves, total_working_days } = attendance;
+  const { present_days, paid_leaves, unpaid_leaves, total_working_days } =
+    attendance;
 
   // Calculate per day salary
   const perDaySalary = basic_salary / total_working_days;
@@ -22,7 +23,8 @@ function calculateSalary(employee, attendance) {
   // Calculate deductions
   const pfDeduction = basic_salary * pf_rate; // PF on full basic salary
   const taxDeduction = 200; // Fixed tax
-  const unpaidDeduction = perDaySalary * unpaid_leaves + (hra / total_working_days) * unpaid_leaves;
+  const unpaidDeduction =
+    perDaySalary * unpaid_leaves + (hra / total_working_days) * unpaid_leaves;
 
   // Total deductions
   const totalDeductions = pfDeduction + taxDeduction + unpaidDeduction;
@@ -42,7 +44,7 @@ function calculateSalary(employee, attendance) {
     net_salary: parseFloat(netSalary.toFixed(2)),
     present_days,
     paid_leaves,
-    unpaid_leaves
+    unpaid_leaves,
   };
 }
 
@@ -53,22 +55,25 @@ export const runPayrun = async (req, res) => {
 
     // Validate input
     if (!month || !year) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Month and year are required' 
+      return res.status(400).json({
+        success: false,
+        message: "Month and year are required",
       });
     }
 
     // Check if payrun already exists
     const existingPayrun = await PayrunModel.getPayrunByPeriod(month, year);
-    
+
     // Get all employees with attendance for this period
-    const attendanceRecords = await AttendanceModel.getAttendanceByPeriod(month, year);
+    const attendanceRecords = await AttendanceModel.getAttendanceByPeriod(
+      month,
+      year
+    );
 
     if (attendanceRecords.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        message: `No attendance records found for ${month} ${year}` 
+      return res.status(404).json({
+        success: false,
+        message: `No attendance records found for ${month} ${year}`,
       });
     }
 
@@ -81,7 +86,7 @@ export const runPayrun = async (req, res) => {
       payrunId = existingPayrun.id;
       // Delete existing payslips for this payrun to regenerate
       await Promise.all(
-        attendanceRecords.map(record => 
+        attendanceRecords.map((record) =>
           PayslipModel.deletePayslip(record.emp_id)
         )
       );
@@ -92,7 +97,7 @@ export const runPayrun = async (req, res) => {
         year,
         total_employees: 0,
         total_cost: 0,
-        status: 'Pending'
+        status: "Pending",
       });
     }
 
@@ -105,14 +110,14 @@ export const runPayrun = async (req, res) => {
         basic_salary: parseFloat(record.basic_salary),
         hra: parseFloat(record.hra),
         pf_rate: parseFloat(record.pf_rate),
-        tax_rate: parseFloat(record.tax_rate)
+        tax_rate: parseFloat(record.tax_rate),
       };
 
       const attendance = {
         present_days: record.present_days,
         paid_leaves: record.paid_leaves,
         unpaid_leaves: record.unpaid_leaves,
-        total_working_days: record.total_working_days
+        total_working_days: record.total_working_days,
       };
 
       // Calculate salary
@@ -125,7 +130,7 @@ export const runPayrun = async (req, res) => {
         month,
         year,
         ...salaryDetails,
-        status: 'Done'
+        status: "Done",
       };
 
       const payslipId = await PayslipModel.createPayslip(payslipData);
@@ -135,7 +140,7 @@ export const runPayrun = async (req, res) => {
         employee_name: employee.name,
         employee_id: employee.emp_id,
         ...salaryDetails,
-        status: 'Done'
+        status: "Done",
       });
 
       totalCost += salaryDetails.net_salary;
@@ -147,7 +152,7 @@ export const runPayrun = async (req, res) => {
       year,
       total_employees: attendanceRecords.length,
       total_cost: parseFloat(totalCost.toFixed(2)),
-      status: 'Pending'
+      status: "Pending",
     });
 
     // Get updated payrun details
@@ -162,17 +167,16 @@ export const runPayrun = async (req, res) => {
         year: finalPayrun.year,
         total_employees: finalPayrun.total_employees,
         total_cost: finalPayrun.total_cost,
-        status: finalPayrun.status
+        status: finalPayrun.status,
       },
-      payslips
+      payslips,
     });
-
   } catch (error) {
-    console.error('Error running payrun:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to run payrun', 
-      error: error.message 
+    console.error("Error running payrun:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to run payrun",
+      error: error.message,
     });
   }
 };
@@ -184,14 +188,14 @@ export const getAllPayruns = async (req, res) => {
     res.status(200).json({
       success: true,
       count: payruns.length,
-      payruns
+      payruns,
     });
   } catch (error) {
-    console.error('Error fetching payruns:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to fetch payruns', 
-      error: error.message 
+    console.error("Error fetching payruns:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch payruns",
+      error: error.message,
     });
   }
 };
@@ -203,22 +207,22 @@ export const getPayrunById = async (req, res) => {
     const payrun = await PayrunModel.getPayrunWithPayslips(id);
 
     if (!payrun) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Payrun not found' 
+      return res.status(404).json({
+        success: false,
+        message: "Payrun not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      payrun
+      payrun,
     });
   } catch (error) {
-    console.error('Error fetching payrun:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to fetch payrun', 
-      error: error.message 
+    console.error("Error fetching payrun:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch payrun",
+      error: error.message,
     });
   }
 };
@@ -230,22 +234,22 @@ export const getPayslipById = async (req, res) => {
     const payslip = await PayslipModel.getPayslipById(id);
 
     if (!payslip) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Payslip not found' 
+      return res.status(404).json({
+        success: false,
+        message: "Payslip not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      payslip
+      payslip,
     });
   } catch (error) {
-    console.error('Error fetching payslip:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to fetch payslip', 
-      error: error.message 
+    console.error("Error fetching payslip:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch payslip",
+      error: error.message,
     });
   }
 };
@@ -256,32 +260,32 @@ export const updatePayrunStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    if (!status || !['Pending', 'Done', 'Validated'].includes(status)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Invalid status. Must be Pending, Done, or Validated' 
+    if (!status || !["Pending", "Done", "Validated"].includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status. Must be Pending, Done, or Validated",
       });
     }
 
     const affectedRows = await PayrunModel.updatePayrunStatus(id, status);
 
     if (affectedRows === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Payrun not found' 
+      return res.status(404).json({
+        success: false,
+        message: "Payrun not found",
       });
     }
 
     res.status(200).json({
       success: true,
-      message: 'Payrun status updated successfully'
+      message: "Payrun status updated successfully",
     });
   } catch (error) {
-    console.error('Error updating payrun status:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to update payrun status', 
-      error: error.message 
+    console.error("Error updating payrun status:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update payrun status",
+      error: error.message,
     });
   }
 };

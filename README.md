@@ -1,3 +1,14 @@
+# Team Members
+
+LaxmiNiroop Papani
+Sharath Chandra Chandupatla
+Zainab Amreen
+Ishrath Jasmine
+
+# Selected Problem Statement
+
+WorkZen – Simplifying HR Operations for Smarter Workplaces
+
 # WorkZen - Smart Human Resource Management System
 
 ![Odoo Logo](https://i.imgur.com/odoo-logo.png)
@@ -13,6 +24,7 @@ WorkZen aims to provide a clean, reliable, and user-friendly experience for both
 **Theme:** Smart Human Resource Management System
 
 **Focus Areas:**
+
 - ✅ User & Role Management
 - ✅ Attendance & Leave Management
 - ✅ Payroll Management
@@ -21,18 +33,21 @@ WorkZen aims to provide a clean, reliable, and user-friendly experience for both
 ## 🛠️ Tech Stack
 
 ### Backend
+
 - **Node.js** + **Express.js** - RESTful API server
 - **MySQL** - Relational database with comprehensive schema
 - **JWT** - Token-based authentication
 - **bcryptjs** - Password hashing
 
 ### Frontend
+
 - **Vite** + **React** - Modern, fast UI framework
 - **React Router v6** - Client-side routing
 - **Axios** - HTTP client
 - **CSS3** - Custom styling with Odoo brand colors
 
 ### Database Architecture
+
 - 12 interconnected tables
 - Foreign key relationships for data integrity
 - Indexes for optimized queries
@@ -52,6 +67,7 @@ WorkZen aims to provide a clean, reliable, and user-friendly experience for both
 ### ✅ Implemented (Phase 1)
 
 #### Authentication & Authorization
+
 - User registration with role assignment
 - Secure login with JWT tokens
 - Role-based access control (Admin, HR Officer, Payroll Officer, Employee)
@@ -59,12 +75,14 @@ WorkZen aims to provide a clean, reliable, and user-friendly experience for both
 - Protected routes
 
 #### User Management
+
 - User profiles with detailed information
 - Employee code generation
 - Department and designation management
 - User status control (active/inactive)
 
 #### Database Design
+
 - Comprehensive schema with 12 tables
 - Users, Roles, Employee Profiles
 - Attendance tracking
@@ -75,6 +93,7 @@ WorkZen aims to provide a clean, reliable, and user-friendly experience for both
 ### 🚧 Ready for Implementation (Phase 2)
 
 #### Attendance Management
+
 - Mark daily attendance (check-in/check-out)
 - View attendance logs (daily/monthly)
 - Attendance summary and reports
@@ -82,6 +101,7 @@ WorkZen aims to provide a clean, reliable, and user-friendly experience for both
 - Admin overview of all attendance
 
 #### Leave Management
+
 - Apply for leave with reason
 - Multiple leave types (Casual, Sick, Earned, etc.)
 - Leave balance tracking
@@ -89,6 +109,7 @@ WorkZen aims to provide a clean, reliable, and user-friendly experience for both
 - Leave history and reports
 
 #### Payroll Management
+
 - Salary structure definition
 - Multiple salary components (earnings/deductions)
 - Monthly payroll generation
@@ -97,6 +118,7 @@ WorkZen aims to provide a clean, reliable, and user-friendly experience for both
 - Salary breakdowns
 
 #### Dashboard & Analytics
+
 - Admin dashboard with key metrics
 - Employee dashboard with personal stats
 - Attendance charts and summaries
@@ -138,7 +160,7 @@ Odoo-x-Amalthea-2025-Hackathon/
 
 ### Prerequisites
 
-- Node.js v18+ 
+- Node.js v18+
 - MySQL 8.0+
 - npm or yarn
 
@@ -220,24 +242,28 @@ payroll ←→ payroll_details (One-to-Many)
 ## 🔐 API Endpoints
 
 ### Authentication
+
 - `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - User login
 - `GET /api/auth/me` - Get current user
 - `POST /api/auth/logout` - Logout
 
 ### Users
+
 - `GET /api/users` - Get all users (Admin/HR)
 - `GET /api/users/profile/:userId` - Get user profile
 - `PUT /api/users/profile/:userId` - Update profile
 - `PUT /api/users/:userId/status` - Update user status
 
 ### Attendance
+
 - `POST /api/attendance/mark` - Mark attendance
 - `GET /api/attendance/my-logs` - Get my logs
 - `GET /api/attendance/all` - Get all (Admin/HR)
 - `GET /api/attendance/summary` - Monthly summary
 
 ### Leave
+
 - `POST /api/leave/apply` - Apply for leave
 - `GET /api/leave/my-leaves` - Get my leaves
 - `GET /api/leave/all` - Get all (Admin/HR)
@@ -246,6 +272,7 @@ payroll ←→ payroll_details (One-to-Many)
 - `GET /api/leave/types` - Get leave types
 
 ### Payroll
+
 - `GET /api/payroll/my-payroll` - Get my payroll
 - `GET /api/payroll/payslip/:id` - Get payslip
 - `GET /api/payroll/all` - Get all (Admin/Payroll)
@@ -253,21 +280,23 @@ payroll ←→ payroll_details (One-to-Many)
 - `PUT /api/payroll/:id/status` - Update status
 
 ### Dashboard
+
 - `GET /api/dashboard/stats` - Admin statistics
 - `GET /api/dashboard/my-stats` - Employee stats
 
 ## 👥 User Roles
 
-| Role | Permissions |
-|------|-------------|
-| **Admin** | Full system access, user management, all reports |
-| **HR Officer** | Employee management, attendance, leave approval |
-| **Payroll Officer** | Payroll generation, salary management |
-| **Employee** | View own records, apply for leave, mark attendance |
+| Role                | Permissions                                        |
+| ------------------- | -------------------------------------------------- |
+| **Admin**           | Full system access, user management, all reports   |
+| **HR Officer**      | Employee management, attendance, leave approval    |
+| **Payroll Officer** | Payroll generation, salary management              |
+| **Employee**        | View own records, apply for leave, mark attendance |
 
 ## 🎨 UI Design
 
 ### Sign In Page
+
 - Email/password login
 - Password visibility toggle
 - Clean, minimal design
@@ -275,6 +304,7 @@ payroll ←→ payroll_details (One-to-Many)
 - Link to sign up
 
 ### Sign Up Page
+
 - Company name (optional)
 - Name, email, phone
 - Password with confirmation
@@ -282,6 +312,7 @@ payroll ←→ payroll_details (One-to-Many)
 - Link to sign in
 
 ### Dashboard
+
 - Welcome message
 - Role-based information
 - User statistics
@@ -308,11 +339,13 @@ payroll ←→ payroll_details (One-to-Many)
 ## 🧪 Testing
 
 ### Health Check
+
 ```bash
 curl http://localhost:5000/api/health
 ```
 
 ### Test Login
+
 ```bash
 curl -X POST http://localhost:5000/api/auth/login \
   -H "Content-Type: application/json" \
