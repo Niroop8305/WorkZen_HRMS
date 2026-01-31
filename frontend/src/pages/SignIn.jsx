@@ -16,6 +16,29 @@ const SignIn = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const demoAccounts = [
+    {
+      role: "Admin",
+      email: "admin@workzen.com",
+      password: "Admin@2025",
+    },
+    {
+      role: "HR Officer",
+      email: "sarah.hr@workzen.com",
+      password: "Hr@2025",
+    },
+    {
+      role: "Payroll Officer",
+      email: "finance@workzen.com",
+      password: "Payroll@2025",
+    },
+    {
+      role: "Employee",
+      email: "john.dev@workzen.com",
+      password: "Employee@2025",
+    },
+  ];
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -57,6 +80,14 @@ const SignIn = () => {
     }
   };
 
+  const handleUseDemo = (account) => {
+    setFormData({
+      email: account.email,
+      password: account.password,
+    });
+    setError("");
+  };
+
   return (
     <div className="auth-page">
       <div className="auth-card">
@@ -69,13 +100,16 @@ const SignIn = () => {
           <div className="auth-logo-subtitle">Powered by Odoo India</div>
         </div>
 
-        <h2 className="auth-title">Login ID/Email :-</h2>
+        <h2 className="auth-title">Sign in to WorkZen</h2>
+        <p className="auth-subtitle">
+          Enter your work email and password to continue.
+        </p>
 
         {error && <div className="alert alert-error">⚠️ {error}</div>}
 
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label className="form-label">Login ID/Email :-</label>
+            <label className="form-label">Email</label>
             <input
               type="email"
               name="email"
@@ -89,7 +123,7 @@ const SignIn = () => {
           </div>
 
           <div className="form-group">
-            <label className="form-label">Password :-</label>
+            <label className="form-label">Password</label>
             <div className="input-with-icon">
               <input
                 type={showPassword ? "text" : "password"}
@@ -116,10 +150,33 @@ const SignIn = () => {
                 <span className="spinner"></span> Signing In...
               </>
             ) : (
-              "SIGN IN"
+              "Sign In"
             )}
           </button>
         </form>
+
+        <div className="demo-accounts">
+          <div className="demo-title">Demo Accounts</div>
+          <ul className="demo-list">
+            {demoAccounts.map((account) => (
+              <li key={account.role}>
+                <div className="demo-info">
+                  <span className="demo-role">{account.role}</span>
+                  <span className="demo-cred">
+                    {account.email} / {account.password}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  className="demo-use-btn"
+                  onClick={() => handleUseDemo(account)}
+                >
+                  Use
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       </div>
     </div>
   );

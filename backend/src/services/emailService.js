@@ -1,13 +1,15 @@
-import nodemailer from 'nodemailer';
+import nodemailer from "nodemailer";
+
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 // Create transporter
 const createTransporter = () => {
   return nodemailer.createTransport({
-    service: 'gmail',
+    service: "gmail",
     auth: {
       user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD
-    }
+      pass: process.env.EMAIL_PASSWORD,
+    },
   });
 };
 
@@ -16,15 +18,22 @@ export const sendWelcomeEmail = async (userDetails) => {
   try {
     const transporter = createTransporter();
 
-    const { email, full_name, employee_code, temporary_password, role, company_name } = userDetails;
+    const {
+      email,
+      full_name,
+      employee_code,
+      temporary_password,
+      role,
+      company_name,
+    } = userDetails;
 
     const mailOptions = {
       from: {
-        name: 'Odoo HRMS',
-        address: process.env.EMAIL_USER
+        name: "Odoo HRMS",
+        address: process.env.EMAIL_USER,
       },
       to: email,
-      subject: '🎉 Welcome to Odoo HRMS - Your Account Has Been Created',
+      subject: "🎉 Welcome to Odoo HRMS - Your Account Has Been Created",
       html: `
         <!DOCTYPE html>
         <html>
@@ -154,9 +163,9 @@ export const sendWelcomeEmail = async (userDetails) => {
           </div>
           
           <div class="content">
-            <p>Dear <strong>${full_name || 'User'}</strong>,</p>
+            <p>Dear <strong>${full_name || "User"}</strong>,</p>
             
-            <p>Welcome to <strong>${company_name || 'Odoo India'}</strong>! Your account has been successfully created in our HRMS system.</p>
+            <p>Welcome to <strong>${company_name || "Odoo India"}</strong>! Your account has been successfully created in our HRMS system.</p>
             
             <div class="credentials-box">
               <h3 style="margin-top: 0; color: #714B67;">Your Login Credentials</h3>
@@ -199,7 +208,7 @@ export const sendWelcomeEmail = async (userDetails) => {
             </div>
             
             <center>
-              <a href="http://localhost:5173/login" class="button">Login to HRMS</a>
+              <a href="${FRONTEND_URL}/login" class="button">Login to HRMS</a>
             </center>
             
             <p style="margin-top: 30px;">
@@ -220,15 +229,14 @@ export const sendWelcomeEmail = async (userDetails) => {
           </div>
         </body>
         </html>
-      `
+      `,
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('Welcome email sent:', info.messageId);
+    console.log("Welcome email sent:", info.messageId);
     return { success: true, messageId: info.messageId };
-
   } catch (error) {
-    console.error('Error sending welcome email:', error);
+    console.error("Error sending welcome email:", error);
     return { success: false, error: error.message };
   }
 };
@@ -238,10 +246,10 @@ export const testEmailConnection = async () => {
   try {
     const transporter = createTransporter();
     await transporter.verify();
-    console.log('Email server connection successful');
-    return { success: true, message: 'Email configuration is working' };
+    console.log("Email server connection successful");
+    return { success: true, message: "Email configuration is working" };
   } catch (error) {
-    console.error('Email server connection failed:', error);
+    console.error("Email server connection failed:", error);
     return { success: false, error: error.message };
   }
 };
@@ -253,11 +261,11 @@ export const sendPasswordChangeEmail = async (email, userName) => {
 
     const mailOptions = {
       from: {
-        name: 'Odoo HRMS',
-        address: process.env.EMAIL_USER
+        name: "Odoo HRMS",
+        address: process.env.EMAIL_USER,
       },
       to: email,
-      subject: '🔒 Password Changed Successfully - Odoo HRMS',
+      subject: "🔒 Password Changed Successfully - Odoo HRMS",
       html: `
         <!DOCTYPE html>
         <html>
@@ -326,7 +334,7 @@ export const sendPasswordChangeEmail = async (email, userName) => {
             
             <p>
               This email confirms that your Odoo HRMS account password was changed on 
-              <strong>${new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}</strong>.
+              <strong>${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</strong>.
             </p>
             
             <div class="warning-box">
@@ -365,31 +373,34 @@ export const sendPasswordChangeEmail = async (email, userName) => {
           </div>
         </body>
         </html>
-      `
+      `,
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('Password change confirmation email sent:', info.messageId);
+    console.log("Password change confirmation email sent:", info.messageId);
     return { success: true, messageId: info.messageId };
-
   } catch (error) {
-    console.error('Error sending password change email:', error);
+    console.error("Error sending password change email:", error);
     return { success: false, error: error.message };
   }
 };
 
 // Send password reset code email
-export const sendPasswordResetCodeEmail = async (email, userName, resetCode) => {
+export const sendPasswordResetCodeEmail = async (
+  email,
+  userName,
+  resetCode,
+) => {
   try {
     const transporter = createTransporter();
 
     const mailOptions = {
       from: {
-        name: 'Odoo HRMS',
-        address: process.env.EMAIL_USER
+        name: "Odoo HRMS",
+        address: process.env.EMAIL_USER,
       },
       to: email,
-      subject: '🔐 Password Reset Code - Odoo HRMS',
+      subject: "🔐 Password Reset Code - Odoo HRMS",
       html: `
         <!DOCTYPE html>
         <html>
@@ -507,15 +518,14 @@ export const sendPasswordResetCodeEmail = async (email, userName, resetCode) => 
           </div>
         </body>
         </html>
-      `
+      `,
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log('Password reset code email sent:', info.messageId);
+    console.log("Password reset code email sent:", info.messageId);
     return { success: true, messageId: info.messageId };
-
   } catch (error) {
-    console.error('Error sending password reset code email:', error);
+    console.error("Error sending password reset code email:", error);
     return { success: false, error: error.message };
   }
 };

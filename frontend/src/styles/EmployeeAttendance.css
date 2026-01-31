@@ -7,7 +7,9 @@
   background: #000000;
   color: #ffffff;
   padding: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+    "Cantarell", sans-serif;
   overflow-y: auto;
 }
 
@@ -31,7 +33,7 @@
 }
 
 .ea-header .btn-logout {
-  background: #714B67;
+  background: #714b67;
   border: none;
   color: #ffffff;
   padding: 10px 24px;
@@ -62,7 +64,7 @@
 }
 
 .ea-nav-btn {
-  background: #714B67;
+  background: #714b67;
   border: none;
   color: #ffffff;
   width: 60px;
@@ -92,11 +94,11 @@
 }
 
 .ea-month-picker:hover {
-  background: #714B67;
+  background: #714b67;
 }
 
 .ea-month-picker:focus {
-  background: #714B67;
+  background: #714b67;
 }
 
 /* Month picker calendar icon */
@@ -129,7 +131,7 @@
 }
 
 .ea-card:hover {
-  background: #714B67;
+  background: #714b67;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(113, 75, 103, 0.4);
 }
@@ -184,13 +186,15 @@
   width: 50px;
   height: 50px;
   border: 3px solid #333;
-  border-top-color: #714B67;
+  border-top-color: #714b67;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .ea-error {
@@ -227,7 +231,7 @@
 }
 
 .ea-table thead {
-  background: #714B67;
+  background: #714b67;
 }
 
 .ea-table th {
@@ -237,7 +241,7 @@
   color: #ffffff;
   font-size: 16px;
   border: none;
-  background: #714B67;
+  background: #714b67;
 }
 
 .ea-table tbody tr {
@@ -273,7 +277,7 @@
   .ea-summary-cards {
     gap: 15px;
   }
-  
+
   .ea-card {
     min-width: 180px;
   }
@@ -283,50 +287,50 @@
   .employee-attendance-page {
     padding: 15px 20px;
   }
-  
+
   .ea-nav-bar {
     gap: 10px;
     margin-bottom: 20px;
   }
-  
+
   .ea-nav-btn {
     width: 45px;
     height: 45px;
     font-size: 18px;
   }
-  
+
   .ea-month-picker {
     padding: 10px 16px;
     font-size: 14px;
     min-width: 130px;
   }
-  
+
   .ea-summary-cards {
     gap: 12px;
   }
-  
+
   .ea-card {
     min-width: 150px;
     padding: 18px;
   }
-  
+
   .ea-card-title {
     font-size: 13px;
   }
-  
+
   .ea-card-value {
     font-size: 28px;
   }
-  
+
   .ea-date-heading {
     font-size: 22px;
     margin-bottom: 20px;
   }
-  
+
   .ea-table {
     font-size: 14px;
   }
-  
+
   .ea-table th,
   .ea-table td {
     padding: 14px 10px;
@@ -338,51 +342,94 @@
   .employee-attendance-page {
     padding: 12px 15px;
   }
-  
+
   .ea-nav-bar {
     flex-wrap: wrap;
   }
-  
+
   .ea-nav-btn {
     width: 40px;
     height: 40px;
     font-size: 16px;
   }
-  
+
   .ea-month-picker {
     flex: 1;
     min-width: 100%;
   }
-  
+
   .ea-summary-cards {
     flex-direction: column;
     gap: 10px;
   }
-  
+
   .ea-card {
     min-width: 100%;
     padding: 16px;
   }
-  
+
   .ea-card-title {
     font-size: 12px;
   }
-  
+
   .ea-card-value {
     font-size: 24px;
   }
-  
+
   .ea-date-heading {
     font-size: 18px;
   }
-  
+
   .ea-table {
     font-size: 12px;
   }
-  
+
   .ea-table th,
   .ea-table td {
     padding: 10px 6px;
     font-size: 12px;
   }
+}
+/* =====================================================
+   Modern Theme Overrides
+   ===================================================== */
+
+.employee-attendance-page {
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.ea-header,
+.ea-nav-bar {
+  background: rgba(15, 23, 42, 0.6);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  backdrop-filter: blur(16px);
+}
+
+.ea-nav-btn {
+  background: var(--odoo-purple);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 24px rgba(113, 75, 103, 0.3);
+}
+
+.ea-month-picker {
+  background: var(--input-bg);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: var(--radius-md);
+}
+
+.ea-summary-cards .ea-card,
+.ea-table-wrapper {
+  background: var(--bg-elevated);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.ea-table thead {
+  background: linear-gradient(135deg, var(--odoo-purple), #4f46e5);
+}
+
+.ea-table tbody tr {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
 }

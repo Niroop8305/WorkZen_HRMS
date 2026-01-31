@@ -41,13 +41,13 @@ export const createUser = async (req, res) => {
       });
     }
 
-    // Validate role (only Employee, HR Manager, Payroll Officer)
-    const allowedRoles = ["Employee", "HR Manager", "Payroll Officer"];
+    // Validate role (only Employee, HR Officer, Payroll Officer)
+    const allowedRoles = ["Employee", "HR Officer", "Payroll Officer"];
     if (!allowedRoles.includes(role_name)) {
       return res.status(400).json({
         success: false,
         message:
-          "Invalid role. Allowed roles: Employee, HR Manager, Payroll Officer",
+          "Invalid role. Allowed roles: Employee, HR Officer, Payroll Officer",
       });
     }
 

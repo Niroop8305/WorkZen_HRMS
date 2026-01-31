@@ -1,63 +1,53 @@
-import { useState } from 'react';
-import PropTypes from 'prop-types';
-import axios from 'axios';
+import { useState } from "react";
+import PropTypes from "prop-types";
+import api from "../services/api";
 
 const CreateUserModal = ({ isOpen, onClose, onUserCreated }) => {
   const [formData, setFormData] = useState({
-    email: '',
-    role_name: 'Employee',
-    first_name: '',
-    last_name: '',
-    phone: '',
-    department: '',
-    designation: '',
-    company_name: 'Odoo India'
+    email: "",
+    role_name: "Employee",
+    first_name: "",
+    last_name: "",
+    phone: "",
+    department: "",
+    designation: "",
+    company_name: "Odoo India",
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [createdUser, setCreatedUser] = useState(null);
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
+    setError("");
     setCreatedUser(null);
 
     try {
-      const token = localStorage.getItem('workzen_token');
-      const response = await axios.post(
-        'http://localhost:5000/api/users/create',
-        formData,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      const response = await api.post("/users/create", formData);
 
       if (response.data.success) {
         setCreatedUser({
           ...response.data.data,
           emailSent: response.data.emailSent,
-          message: response.data.message
+          message: response.data.message,
         });
         onUserCreated(response.data.data);
-        
+
         // Reset form after 5 seconds
         setTimeout(() => {
           handleClose();
         }, 5000);
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create user');
+      setError(err.response?.data?.message || "Failed to create user");
     } finally {
       setLoading(false);
     }
@@ -65,16 +55,16 @@ const CreateUserModal = ({ isOpen, onClose, onUserCreated }) => {
 
   const handleClose = () => {
     setFormData({
-      email: '',
-      role_name: 'Employee',
-      first_name: '',
-      last_name: '',
-      phone: '',
-      department: '',
-      designation: '',
-      company_name: 'Odoo India'
+      email: "",
+      role_name: "Employee",
+      first_name: "",
+      last_name: "",
+      phone: "",
+      department: "",
+      designation: "",
+      company_name: "Odoo India",
     });
-    setError('');
+    setError("");
     setCreatedUser(null);
     onClose();
   };
@@ -86,26 +76,64 @@ const CreateUserModal = ({ isOpen, onClose, onUserCreated }) => {
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Create New User</h2>
-          <button className="modal-close" onClick={handleClose}>&times;</button>
+          <button className="modal-close" onClick={handleClose}>
+            &times;
+          </button>
         </div>
 
         <div className="modal-body">
           {error && <div className="alert alert-error">{error}</div>}
-          
+
           {createdUser && (
             <div className="alert alert-success">
               <h3>✅ User Created Successfully!</h3>
-              <div style={{ marginTop: '10px', padding: '10px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px' }}>
-                <p><strong>Email:</strong> {createdUser.email}</p>
-                <p><strong>Temporary Password:</strong> <code style={{ background: '#333', padding: '4px 8px', borderRadius: '4px' }}>{createdUser.temporary_password}</code></p>
-                <p><strong>Employee Code:</strong> {createdUser.employee_code}</p>
+              <div
+                style={{
+                  marginTop: "10px",
+                  padding: "10px",
+                  background: "rgba(0,0,0,0.2)",
+                  borderRadius: "6px",
+                }}
+              >
+                <p>
+                  <strong>Email:</strong> {createdUser.email}
+                </p>
+                <p>
+                  <strong>Temporary Password:</strong>{" "}
+                  <code
+                    style={{
+                      background: "#333",
+                      padding: "4px 8px",
+                      borderRadius: "4px",
+                    }}
+                  >
+                    {createdUser.temporary_password}
+                  </code>
+                </p>
+                <p>
+                  <strong>Employee Code:</strong> {createdUser.employee_code}
+                </p>
                 {createdUser.emailSent ? (
-                  <p style={{ marginTop: '10px', fontSize: '13px', color: '#155724' }}>
-                    ✉️ <strong>Welcome email sent successfully!</strong> The user will receive their credentials at {createdUser.email}
+                  <p
+                    style={{
+                      marginTop: "10px",
+                      fontSize: "13px",
+                      color: "#155724",
+                    }}
+                  >
+                    ✉️ <strong>Welcome email sent successfully!</strong> The
+                    user will receive their credentials at {createdUser.email}
                   </p>
                 ) : (
-                  <p style={{ marginTop: '10px', fontSize: '13px', color: '#856404' }}>
-                    ⚠️ Email could not be sent. Please manually share these credentials with the user.
+                  <p
+                    style={{
+                      marginTop: "10px",
+                      fontSize: "13px",
+                      color: "#856404",
+                    }}
+                  >
+                    ⚠️ Email could not be sent. Please manually share these
+                    credentials with the user.
                   </p>
                 )}
               </div>
@@ -161,7 +189,7 @@ const CreateUserModal = ({ isOpen, onClose, onUserCreated }) => {
                   required
                 >
                   <option value="Employee">Employee</option>
-                  <option value="HR Manager">HR Manager</option>
+                  <option value="HR Officer">HR Officer</option>
                   <option value="Payroll Officer">Payroll Officer</option>
                 </select>
               </div>
@@ -226,7 +254,7 @@ const CreateUserModal = ({ isOpen, onClose, onUserCreated }) => {
                   className="btn btn-primary"
                   disabled={loading}
                 >
-                  {loading ? 'Creating...' : 'Create User'}
+                  {loading ? "Creating..." : "Create User"}
                 </button>
               </div>
             </form>
@@ -240,7 +268,7 @@ const CreateUserModal = ({ isOpen, onClose, onUserCreated }) => {
 CreateUserModal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
-  onUserCreated: PropTypes.func.isRequired
+  onUserCreated: PropTypes.func.isRequired,
 };
 
 export default CreateUserModal;

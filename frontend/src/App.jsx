@@ -16,6 +16,7 @@ import TimeOff from "./pages/TimeOff";
 import Reports from "./pages/Reports";
 import PayrollPage from "./pages/PayrollPage";
 import PayrunDashboard from "./pages/PayrunDashboard";
+import Payslip from "./pages/Payslip";
 import "./styles/App.css";
 
 function App() {
@@ -25,7 +26,7 @@ function App() {
         <div className="app-container">
           <Routes>
             {/* Public Routes */}
-            <Route path="/" element={<Navigate to="/payroll" />} />
+            <Route path="/" element={<Navigate to="/login" />} />
             <Route path="/login" element={<SignIn />} />
 
             {/* Protected Routes */}
@@ -87,11 +88,35 @@ function App() {
               }
             />
 
-            {/* Payroll Page - Standalone (No protection for demo) */}
-            <Route path="/payroll" element={<PayrollPage />} />
+            {/* Payroll Page */}
+            <Route
+              path="/payroll"
+              element={
+                <ProtectedRoute>
+                  <PayrollPage />
+                </ProtectedRoute>
+              }
+            />
 
-            {/* Payrun Dashboard - Functional Payrun System */}
-            <Route path="/payrun" element={<PayrunDashboard />} />
+            {/* Payslip Detail */}
+            <Route
+              path="/payroll/payslip/:payrollId"
+              element={
+                <ProtectedRoute allowedRoles={["Admin", "Payroll Officer"]}>
+                  <Payslip />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Payrun Dashboard */}
+            <Route
+              path="/payrun"
+              element={
+                <ProtectedRoute allowedRoles={["Admin", "Payroll Officer"]}>
+                  <PayrunDashboard />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Unauthorized Page */}
             <Route

@@ -9,7 +9,7 @@ import "../styles/App.css";
 import "../styles/Reports.css";
 
 const Reports = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState("reports");
   const [reportType, setReportType] = useState("salary-statement");
@@ -42,13 +42,8 @@ const Reports = () => {
 
   const fetchEmployees = async () => {
     try {
-      const token = localStorage.getItem("workzen_token");
       // Fetch payroll employees for salary statement report
-      const response = await api.get("/employees", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await api.get("/employees");
       console.log("Employees API Response:", response.data);
       const employeesList = response.data.data || [];
       console.log("Employees List:", employeesList);
@@ -63,8 +58,8 @@ const Reports = () => {
   const navItems = [
     { id: "employees", label: "Employees", path: "/dashboard" },
     { id: "attendance", label: "Attendance", path: "/attendance" },
-    { id: "timeoff", label: "Time Off", path: null },
-    { id: "payroll", label: "Payroll", path: null },
+    { id: "timeoff", label: "Time Off", path: "/timeoff" },
+    { id: "payroll", label: "Payroll", path: "/payroll" },
     { id: "reports", label: "Reports", path: "/reports" },
   ];
 
@@ -74,11 +69,6 @@ const Reports = () => {
     } else {
       setActiveSection(item.id);
     }
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
   };
 
   const handleGenerateReport = async () => {
@@ -98,14 +88,14 @@ const Reports = () => {
     try {
       // Fetch salary statement data
       const response = await api.get(
-        `/payroll/salary-statement?employee_id=${selectedEmployee}&year=${selectedYear}`
+        `/payroll/salary-statement?employee_id=${selectedEmployee}&year=${selectedYear}`,
       );
 
       // Show the report inline
       setReportData(response.data.data);
       setEmployeeData(
         response.data.employee ||
-          employees.find((e) => e.emp_id === selectedEmployee)
+          employees.find((e) => e.emp_id === selectedEmployee),
       );
       setShowReport(true);
     } catch (err) {
@@ -141,7 +131,7 @@ const Reports = () => {
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: "#000000",
+        backgroundColor: "#ffffff",
       },
       jsPDF: {
         unit: "mm",
@@ -387,17 +377,17 @@ const Reports = () => {
               <div class="component-row">
                 <div>Basic</div>
                 <div>₹ ${parseFloat(data[0]?.basic_salary || 0).toFixed(
-                  0
+                  0,
                 )}</div>
                 <div>₹ ${(parseFloat(data[0]?.basic_salary || 0) * 12).toFixed(
-                  0
+                  0,
                 )}</div>
               </div>
               <div class="component-row">
                 <div>HRA</div>
                 <div>₹ ${parseFloat(data[0]?.allowances || 0).toFixed(0)}</div>
                 <div>₹ ${(parseFloat(data[0]?.allowances || 0) * 12).toFixed(
-                  0
+                  0,
                 )}</div>
               </div>
               <div class="component-row">
@@ -431,7 +421,7 @@ const Reports = () => {
                 <div>PF</div>
                 <div>₹ ${parseFloat(data[0]?.deductions || 0).toFixed(0)}</div>
                 <div>₹ ${(parseFloat(data[0]?.deductions || 0) * 12).toFixed(
-                  0
+                  0,
                 )}</div>
               </div>
               <div class="component-row">
@@ -578,39 +568,16 @@ const Reports = () => {
             <div className="report-display">
               <div className="report-content">
                 <div className="report-print-header">
-                  <h1
-                    style={{
-                      color: "#5dade2",
-                      textAlign: "center",
-                      fontSize: "28px",
-                      marginBottom: "20px",
-                      paddingBottom: "20px",
-                      borderBottom: "2px solid #fff",
-                    }}
-                  >
+                  <h1 className="report-print-title">
                     Salary Statement Report Print
                   </h1>
                 </div>
 
-                <div
-                  style={{
-                    color: "#ff4444",
-                    fontSize: "18px",
-                    marginBottom: "20px",
-                  }}
-                >
+                <div className="report-company-name">
                   [{user?.profile?.company_name || "kitsw"}]
                 </div>
 
-                <div
-                  style={{
-                    color: "#ff4444",
-                    fontSize: "20px",
-                    marginBottom: "25px",
-                  }}
-                >
-                  Salary Statement Report
-                </div>
+                <div className="report-subtitle">Salary Statement Report</div>
 
                 <div className="employee-details-grid">
                   <div className="detail-column">
@@ -637,7 +604,7 @@ const Reports = () => {
                         employeeData?.created_at
                           ? new Date(
                               employeeData?.date_of_joining ||
-                                employeeData?.created_at
+                                employeeData?.created_at,
                             ).toLocaleDateString("en-IN")
                           : "N/A"}
                       </span>
@@ -651,7 +618,7 @@ const Reports = () => {
                         employeeData?.created_at
                           ? new Date(
                               employeeData?.date_of_joining ||
-                                employeeData?.created_at
+                                employeeData?.created_at,
                             ).toLocaleDateString("en-IN")
                           : "N/A"}
                       </span>
@@ -660,33 +627,15 @@ const Reports = () => {
                 </div>
 
                 <div className="salary-components-section">
-                  <h3
-                    style={{
-                      color: "#ff4444",
-                      fontSize: "18px",
-                      marginBottom: "15px",
-                      marginTop: "30px",
-                    }}
-                  >
-                    Salary Components
-                  </h3>
+                  <h3 className="report-section-title">Salary Components</h3>
 
                   <div className="components-table-header">
                     <div></div>
-                    <div style={{ color: "#5dade2" }}>Monthly Amount</div>
-                    <div style={{ color: "#5dade2" }}>Yearly Amount</div>
+                    <div>Monthly Amount</div>
+                    <div>Yearly Amount</div>
                   </div>
 
-                  <h4
-                    style={{
-                      color: "#ff4444",
-                      fontSize: "18px",
-                      marginTop: "20px",
-                      marginBottom: "10px",
-                    }}
-                  >
-                    Earnings
-                  </h4>
+                  <h4 className="report-subsection-title">Earnings</h4>
 
                   {reportData && reportData.length > 0 ? (
                     <>
@@ -695,7 +644,7 @@ const Reports = () => {
                         <div>
                           ₹{" "}
                           {parseFloat(reportData[0]?.basic_salary || 0).toFixed(
-                            0
+                            0,
                           )}
                         </div>
                         <div>
@@ -710,7 +659,7 @@ const Reports = () => {
                         <div>
                           ₹{" "}
                           {parseFloat(reportData[0]?.allowances || 0).toFixed(
-                            0
+                            0,
                           )}
                         </div>
                         <div>
@@ -739,16 +688,7 @@ const Reports = () => {
                     </div>
                   )}
 
-                  <h4
-                    style={{
-                      color: "#ff4444",
-                      fontSize: "18px",
-                      marginTop: "20px",
-                      marginBottom: "10px",
-                    }}
-                  >
-                    Deduction
-                  </h4>
+                  <h4 className="report-subsection-title">Deduction</h4>
 
                   {reportData && reportData.length > 0 ? (
                     <>
@@ -757,7 +697,7 @@ const Reports = () => {
                         <div>
                           ₹{" "}
                           {parseFloat(reportData[0]?.deductions || 0).toFixed(
-                            0
+                            0,
                           )}
                         </div>
                         <div>

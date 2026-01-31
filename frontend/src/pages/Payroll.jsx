@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
-import axios from "axios";
+import api from "../services/api";
 
 const Payroll = () => {
   const { user } = useAuth();
@@ -21,7 +21,7 @@ const Payroll = () => {
   const [payrunSuccess, setPayrunSuccess] = useState(false);
 
   const isPayrollOfficer =
-    user?.roleName === "Payroll Officer" || user?.roleName === "Admin";
+    user?.role === "Payroll Officer" || user?.role === "Admin";
 
   useEffect(() => {
     fetchPayrollData();
@@ -30,20 +30,13 @@ const Payroll = () => {
   const fetchPayrollData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("workzen_token");
-
-      let url = isPayrollOfficer
-        ? "http://localhost:5000/api/payroll/all"
-        : "http://localhost:5000/api/payroll/my-payroll";
+      const url = isPayrollOfficer ? "/payroll/all" : "/payroll/my-payroll";
 
       const params = {};
       if (selectedMonth) params.month = selectedMonth;
       if (selectedYear) params.year = selectedYear;
 
-      const response = await axios.get(url, {
-        headers: { Authorization: `Bearer ${token}` },
-        params,
-      });
+      const response = await api.get(url, { params });
 
       setPayrollData(response.data.data || []);
       if (response.data.data && response.data.data.length > 0) {
@@ -105,7 +98,7 @@ const Payroll = () => {
 
   const years = Array.from(
     { length: 5 },
-    (_, i) => new Date().getFullYear() - i
+    (_, i) => new Date().getFullYear() - i,
   );
 
   // Generate chart data for the last 3 months
@@ -612,8 +605,8 @@ const Payroll = () => {
                                         sum +
                                         calculateSalaryComponents(p)
                                           .employerCost,
-                                      0
-                                    )
+                                      0,
+                                    ),
                                   )}
                                 </strong>
                               </td>
@@ -624,8 +617,8 @@ const Payroll = () => {
                                       (sum, p) =>
                                         sum +
                                         calculateSalaryComponents(p).basicWage,
-                                      0
-                                    )
+                                      0,
+                                    ),
                                   )}
                                 </strong>
                               </td>
@@ -636,8 +629,8 @@ const Payroll = () => {
                                       (sum, p) =>
                                         sum +
                                         calculateSalaryComponents(p).grossWage,
-                                      0
-                                    )
+                                      0,
+                                    ),
                                   )}
                                 </strong>
                               </td>
@@ -648,8 +641,8 @@ const Payroll = () => {
                                       (sum, p) =>
                                         sum +
                                         calculateSalaryComponents(p).netWage,
-                                      0
-                                    )
+                                      0,
+                                    ),
                                   )}
                                 </strong>
                               </td>
@@ -752,7 +745,7 @@ const Payroll = () => {
                                     </td>
                                     <td className="text-right">
                                       {formatCurrency(
-                                        selectedEmployee.gross_salary
+                                        selectedEmployee.gross_salary,
                                       )}
                                     </td>
                                   </tr>
@@ -799,7 +792,7 @@ const Payroll = () => {
                                     <td className="text-center">100</td>
                                     <td className="text-right">
                                       {formatCurrency(
-                                        selectedEmployee.gross_salary * 0.5
+                                        selectedEmployee.gross_salary * 0.5,
                                       )}
                                     </td>
                                   </tr>
@@ -808,7 +801,7 @@ const Payroll = () => {
                                     <td className="text-center">100</td>
                                     <td className="text-right">
                                       {formatCurrency(
-                                        selectedEmployee.gross_salary * 0.2
+                                        selectedEmployee.gross_salary * 0.2,
                                       )}
                                     </td>
                                   </tr>
@@ -817,7 +810,7 @@ const Payroll = () => {
                                     <td className="text-center">100</td>
                                     <td className="text-right">
                                       {formatCurrency(
-                                        selectedEmployee.gross_salary * 0.12
+                                        selectedEmployee.gross_salary * 0.12,
                                       )}
                                     </td>
                                   </tr>
@@ -826,7 +819,7 @@ const Payroll = () => {
                                     <td className="text-center">100</td>
                                     <td className="text-right">
                                       {formatCurrency(
-                                        selectedEmployee.gross_salary * 0.1
+                                        selectedEmployee.gross_salary * 0.1,
                                       )}
                                     </td>
                                   </tr>
@@ -835,7 +828,7 @@ const Payroll = () => {
                                     <td className="text-center">100</td>
                                     <td className="text-right">
                                       {formatCurrency(
-                                        selectedEmployee.gross_salary * 0.05
+                                        selectedEmployee.gross_salary * 0.05,
                                       )}
                                     </td>
                                   </tr>
@@ -844,7 +837,7 @@ const Payroll = () => {
                                     <td className="text-center">100</td>
                                     <td className="text-right">
                                       {formatCurrency(
-                                        selectedEmployee.gross_salary * 0.03
+                                        selectedEmployee.gross_salary * 0.03,
                                       )}
                                     </td>
                                   </tr>
@@ -877,7 +870,7 @@ const Payroll = () => {
                                     <td className="text-center">100</td>
                                     <td className="text-right">
                                       {formatCurrency(
-                                        selectedEmployee.total_deductions * 0.4
+                                        selectedEmployee.total_deductions * 0.4,
                                       )}
                                     </td>
                                   </tr>
@@ -886,7 +879,7 @@ const Payroll = () => {
                                     <td className="text-center">100</td>
                                     <td className="text-right">
                                       {formatCurrency(
-                                        selectedEmployee.total_deductions * 0.4
+                                        selectedEmployee.total_deductions * 0.4,
                                       )}
                                     </td>
                                   </tr>
@@ -895,7 +888,7 @@ const Payroll = () => {
                                     <td className="text-center">100</td>
                                     <td className="text-right">
                                       {formatCurrency(
-                                        selectedEmployee.total_deductions * 0.2
+                                        selectedEmployee.total_deductions * 0.2,
                                       )}
                                     </td>
                                   </tr>
@@ -908,7 +901,7 @@ const Payroll = () => {
                                     <td className="text-right">
                                       <strong>
                                         {formatCurrency(
-                                          selectedEmployee.total_deductions
+                                          selectedEmployee.total_deductions,
                                         )}
                                       </strong>
                                     </td>
@@ -1098,7 +1091,7 @@ const Payroll = () => {
                         <td>100</td>
                         <td className="text-right">
                           {formatCurrency(
-                            selectedEmployee.total_deductions * 0.4
+                            selectedEmployee.total_deductions * 0.4,
                           )}
                         </td>
                       </tr>
@@ -1107,7 +1100,7 @@ const Payroll = () => {
                         <td>100</td>
                         <td className="text-right">
                           {formatCurrency(
-                            selectedEmployee.total_deductions * 0.4
+                            selectedEmployee.total_deductions * 0.4,
                           )}
                         </td>
                       </tr>
