@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../services/api";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import "../styles/TimeOff.css";
@@ -44,24 +44,13 @@ const TimeOff = () => {
   const fetchLeaveData = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("workzen_token");
 
       // Fetch leave requests
-      const requestsResponse = await axios.get(
-        "http://localhost:5000/api/leave/requests",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const requestsResponse = await api.get("/leave/requests");
       setLeaveRequests(requestsResponse.data.data || []);
 
       // Fetch leave balance
-      const balanceResponse = await axios.get(
-        "http://localhost:5000/api/leave/balance",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const balanceResponse = await api.get("/leave/balance");
       setLeaveBalance(balanceResponse.data.data);
     } catch (error) {
       console.error("Error fetching leave data:", error);
@@ -72,13 +61,7 @@ const TimeOff = () => {
 
   const fetchEmployees = async () => {
     try {
-      const token = localStorage.getItem("workzen_token");
-      const response = await axios.get(
-        "http://localhost:5000/api/leave/employees",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await api.get("/leave/employees");
       setEmployees(response.data.data || []);
     } catch (error) {
       console.error("Error fetching employees:", error);
@@ -124,7 +107,7 @@ const TimeOff = () => {
     if (field === "start_date" || field === "end_date") {
       const days = calculateAllocation(
         field === "start_date" ? value : newRequest.start_date,
-        field === "end_date" ? value : newRequest.end_date
+        field === "end_date" ? value : newRequest.end_date,
       );
       updatedRequest.allocation = days;
 
@@ -163,10 +146,7 @@ const TimeOff = () => {
     }
 
     try {
-      const token = localStorage.getItem("workzen_token");
-      await axios.post("http://localhost:5000/api/leave/request", newRequest, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      await api.post("/leave/request", newRequest);
 
       setShowModal(false);
       setNewRequest({
@@ -188,19 +168,14 @@ const TimeOff = () => {
   const handleApproveReject = async (requestId, status) => {
     if (
       !window.confirm(
-        `Are you sure you want to ${status.toLowerCase()} this request?`
+        `Are you sure you want to ${status.toLowerCase()} this request?`,
       )
     ) {
       return;
     }
 
     try {
-      const token = localStorage.getItem("workzen_token");
-      await axios.put(
-        `http://localhost:5000/api/leave/request/${requestId}/status`,
-        { status },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.put(`/leave/request/${requestId}/status`, { status });
       fetchLeaveData();
       alert(`Request ${status.toLowerCase()} successfully!`);
     } catch (error) {
@@ -212,14 +187,7 @@ const TimeOff = () => {
   const handleSubmitAllocation = async (e) => {
     e.preventDefault();
     try {
-      const token = localStorage.getItem("workzen_token");
-      await axios.post(
-        "http://localhost:5000/api/leave/allocate",
-        newAllocation,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await api.post("/leave/allocate", newAllocation);
 
       setShowAllocationModal(false);
       setNewAllocation({

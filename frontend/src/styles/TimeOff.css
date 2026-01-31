@@ -23,6 +23,10 @@
 
 .company-logo-section {
   display: flex;
+  /* =====================================================
+   Modern Theme Overrides
+   ===================================================== */
+
   align-items: center;
   gap: 10px;
 }
@@ -511,4 +515,93 @@
   .leave-table td {
     padding: 8px 10px;
   }
+}
+
+/* =====================================================
+   Modern Theme Overrides
+   ===================================================== */
+
+.timeoff-container {
+  background-color: transparent;
+  color: var(--text-primary);
+}
+
+.timeoff-sidebar,
+.timeoff-main {
+  background: transparent;
+}
+
+.tab-container,
+.action-bar {
+  background: rgba(15, 23, 42, 0.6);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  backdrop-filter: blur(16px);
+}
+
+.tab-button {
+  color: var(--text-secondary);
+}
+
+.tab-button.active {
+  color: #fff;
+  background: linear-gradient(135deg, var(--odoo-purple), #4f46e5);
+  border-bottom-color: transparent;
+  border-radius: 999px;
+  margin: 6px;
+}
+
+.btn-new {
+  border-radius: 999px;
+  background: linear-gradient(
+    135deg,
+    var(--odoo-purple),
+    var(--odoo-purple-dark)
+  );
+  box-shadow: 0 10px 24px rgba(113, 75, 103, 0.35);
+}
+
+.search-bar,
+.filter-select,
+.leave-type-select,
+.date-input {
+  background: var(--input-bg);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+}
+
+.leave-balance-row {
+  background: transparent;
+}
+
+.balance-card {
+  background: var(--bg-elevated);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.table-container {
+  background: transparent;
+}
+
+.leave-table,
+.leave-table thead {
+  background: var(--bg-elevated);
+}
+
+.leave-table th {
+  color: var(--text-secondary);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.leave-table td {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.modal-content {
+  background: var(--bg-elevated);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  box-shadow: var(--shadow-lg);
 }

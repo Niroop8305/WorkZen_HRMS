@@ -5,16 +5,17 @@
 /* Report Display */
 .report-display {
   margin-top: 40px;
-  background: #000;
-  border: 2px solid #fff;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
   padding: 40px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
 }
 
 .report-content {
   max-width: 900px;
   margin: 0 auto;
-  color: #fff;
+  color: #0f172a;
 }
 
 .employee-details-grid {
@@ -32,17 +33,25 @@
   display: flex;
   margin-bottom: 12px;
   gap: 20px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 14px;
 }
 
 .detail-label {
-  color: #fff;
+  color: #64748b;
   min-width: 180px;
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
 .detail-value {
-  color: #fff;
+  color: #0f172a;
   font-size: 14px;
+  font-weight: 600;
 }
 
 .salary-components-section {
@@ -53,10 +62,13 @@
   display: flex;
   justify-content: space-between;
   padding: 10px 0;
-  border-bottom: 1px solid #fff;
+  border-bottom: 1px solid #e2e8f0;
   margin-bottom: 10px;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 700;
+  color: #2563eb;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
 .components-table-header div {
@@ -72,15 +84,17 @@
   font-size: 14px;
 }
 
+.component-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 14px;
+}
 .component-row div {
   flex: 1;
   text-align: center;
-  color: #fff;
-}
-
-.component-row div:first-child {
-  text-align: left;
-  padding-left: 40px;
+  color: #0f172a;
 }
 
 .net-salary-row {
@@ -101,7 +115,47 @@
   margin-top: 40px;
   text-align: center;
   padding-top: 30px;
-  border-top: 2px solid #444;
+  border-top: 1px solid #e2e8f0;
+}
+
+.report-print-title {
+  color: #1e3a8a;
+  text-align: center;
+  font-size: 26px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+  font-weight: 700;
+}
+
+.report-company-name {
+  color: #334155;
+  font-size: 16px;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.report-subtitle {
+  color: #2563eb;
+  font-size: 18px;
+  margin-bottom: 24px;
+  font-weight: 600;
+}
+
+.report-section-title {
+  color: #0f172a;
+  font-size: 17px;
+  margin-bottom: 14px;
+  margin-top: 28px;
+  font-weight: 700;
+}
+
+.report-subsection-title {
+  color: #334155;
+  font-size: 15px;
+  margin-top: 18px;
+  margin-bottom: 10px;
+  font-weight: 700;
 }
 
 .btn-download-pdf {
@@ -222,7 +276,7 @@
   font-size: 15px;
   cursor: pointer;
   outline: none;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
   transition: all 0.2s ease;
   appearance: none;
   background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
@@ -363,4 +417,50 @@
     padding: 10px 24px;
     font-size: 14px;
   }
+}
+.report-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #888;
+}
+
+/* =====================================================
+   Modern Theme Overrides
+   ===================================================== */
+
+.reports-container {
+  background: transparent;
+  padding: 32px;
+}
+
+.report-card {
+  background: var(--bg-elevated);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.report-header {
+  background: rgba(15, 23, 42, 0.6);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+  backdrop-filter: blur(16px);
+}
+
+.report-name {
+  color: var(--text-primary);
+}
+
+.form-select {
+  background: var(--input-bg);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
+}
+
+.btn-print,
+.btn-download-pdf {
+  border-radius: 999px;
+  box-shadow: 0 10px 24px rgba(113, 75, 103, 0.25);
 }

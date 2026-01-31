@@ -1,4 +1,5 @@
 import pool from "../config/database.js";
+import PayslipModel from "../models/payslipModel.js";
 
 // Helper function to calculate payable days using attendance data
 export const calculatePayableDays = async (userId, month, year) => {
@@ -18,7 +19,7 @@ export const calculatePayableDays = async (userId, month, year) => {
         COALESCE(SUM(total_hours), 0) as total_hours
        FROM attendance 
        WHERE user_id = ? AND MONTH(attendance_date) = ? AND YEAR(attendance_date) = ?`,
-      [userId, month, year]
+      [userId, month, year],
     );
 
     // Calculate paid leave days
@@ -31,7 +32,7 @@ export const calculatePayableDays = async (userId, month, year) => {
        AND lt.is_paid = TRUE
        AND ((MONTH(la.start_date) = ? AND YEAR(la.start_date) = ?)
             OR (MONTH(la.end_date) = ? AND YEAR(la.end_date) = ?))`,
-      [userId, month, year, month, year]
+      [userId, month, year, month, year],
     );
 
     const presentDays = parseFloat(attendanceRows[0]?.present_days || 0);
@@ -109,7 +110,7 @@ export const getPayslipDetails = async (req, res) => {
        INNER JOIN users u ON p.user_id = u.user_id
        LEFT JOIN employee_profiles ep ON u.user_id = ep.user_id
        WHERE p.payroll_id = ?`,
-      [payrollId]
+      [payrollId],
     );
 
     if (payroll.length === 0) {
@@ -137,7 +138,7 @@ export const getPayslipDetails = async (req, res) => {
        INNER JOIN salary_components sc ON pd.component_id = sc.component_id
        WHERE pd.payroll_id = ?
        ORDER BY sc.component_type DESC, pd.amount DESC`,
-      [payrollId]
+      [payrollId],
     );
 
     // Get attendance breakdown for that month
@@ -154,7 +155,7 @@ export const getPayslipDetails = async (req, res) => {
        WHERE user_id = ? 
        AND MONTH(attendance_date) = ? 
        AND YEAR(attendance_date) = ?`,
-      [payroll[0].user_id, payroll[0].month, payroll[0].year]
+      [payroll[0].user_id, payroll[0].month, payroll[0].year],
     );
 
     res.status(200).json({
@@ -252,7 +253,7 @@ export const generatePayroll = async (req, res) => {
        FROM employee_salary_structure ess
        INNER JOIN salary_components sc ON ess.component_id = sc.component_id
        WHERE ess.user_id = ? AND ess.is_active = TRUE`,
-      [user_id]
+      [user_id],
     );
 
     if (salaryComponents.length === 0) {
@@ -313,7 +314,7 @@ export const generatePayroll = async (req, res) => {
         payment_method || "Bank Transfer",
         remarks || null,
         generatedBy,
-      ]
+      ],
     );
 
     const payrollId = result.insertId;
@@ -326,7 +327,7 @@ export const generatePayroll = async (req, res) => {
     ]);
     await connection.query(
       "INSERT INTO payroll_details (payroll_id, component_id, amount) VALUES ?",
-      [detailsValues]
+      [detailsValues],
     );
 
     await connection.commit();
@@ -364,7 +365,7 @@ export const updatePayrollStatus = async (req, res) => {
 
     const [result] = await pool.query(
       "UPDATE payroll SET payment_status = ?, payment_date = ? WHERE payroll_id = ?",
-      [payment_status, payment_date || null, payrollId]
+      [payment_status, payment_date || null, payrollId],
     );
 
     if (result.affectedRows === 0) {
@@ -388,11 +389,193 @@ export const updatePayrollStatus = async (req, res) => {
   }
 };
 
+// Create a manual payroll payslip
+export const createPayrollPayslip = async (req, res) => {
+  try {
+    const {
+      employee_id,
+      month,
+      year,
+      present_days = 0,
+      paid_leaves = 0,
+      unpaid_leaves = 0,
+      total_working_days = 30,
+      status,
+    } = req.body;
+
+    if (!employee_id || !month || !year) {
+      return res.status(400).json({
+        success: false,
+        message: "Employee, month and year are required",
+      });
+    }
+
+    const [employees] = await pool.query(
+      "SELECT * FROM payroll_employees WHERE emp_id = ? OR id = ?",
+      [employee_id, employee_id],
+    );
+
+    if (!employees.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Employee not found",
+      });
+    }
+
+    const employee = employees[0];
+
+    const workingDays = Number(total_working_days || 30);
+    if (workingDays <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Total working days must be greater than 0",
+      });
+    }
+
+    const present = Number(present_days || 0);
+    const paid = Number(paid_leaves || 0);
+    const unpaid = Number(unpaid_leaves || 0);
+
+    const perDaySalary = Number(employee.basic_salary) / workingDays;
+    const earnedBasicSalary = perDaySalary * (present + paid);
+    const earnedHRA =
+      (Number(employee.hra || 0) / workingDays) * (present + paid);
+    const earnedSalary = earnedBasicSalary + earnedHRA;
+    const grossSalary = earnedSalary;
+
+    const pfDeduction =
+      Number(employee.basic_salary) * Number(employee.pf_rate || 0);
+    const taxDeduction = 200;
+    const unpaidDeduction =
+      perDaySalary * unpaid +
+      (Number(employee.hra || 0) / workingDays) * unpaid;
+    const totalDeductions = pfDeduction + taxDeduction + unpaidDeduction;
+    const netSalary = grossSalary - totalDeductions;
+
+    const payslipId = await PayslipModel.createPayslip({
+      emp_id: employee.id,
+      payrun_id: null,
+      month,
+      year,
+      basic_salary: Number(employee.basic_salary),
+      hra: Number(employee.hra || 0),
+      earned_salary: parseFloat(earnedSalary.toFixed(2)),
+      gross_salary: parseFloat(grossSalary.toFixed(2)),
+      pf_deduction: parseFloat(pfDeduction.toFixed(2)),
+      tax_deduction: parseFloat(taxDeduction.toFixed(2)),
+      unpaid_deduction: parseFloat(unpaidDeduction.toFixed(2)),
+      total_deductions: parseFloat(totalDeductions.toFixed(2)),
+      net_salary: parseFloat(netSalary.toFixed(2)),
+      present_days: present,
+      paid_leaves: paid,
+      unpaid_leaves: unpaid,
+      status: status || "Done",
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Payslip created successfully",
+      data: { payslip_id: payslipId },
+    });
+  } catch (error) {
+    console.error("Error creating payslip:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error creating payslip",
+      error: error.message,
+    });
+  }
+};
+
+// Get payroll payslips (from payroll_payslips table)
+export const getPayrollPayslips = async (req, res) => {
+  try {
+    const { month, year, status } = req.query;
+
+    let query = `
+      SELECT p.*, e.name as employee_name, e.emp_id as employee_code
+      FROM payroll_payslips p
+      JOIN payroll_employees e ON p.emp_id = e.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (month) {
+      query += " AND p.month = ?";
+      params.push(month);
+    }
+
+    if (year) {
+      query += " AND p.year = ?";
+      params.push(year);
+    }
+
+    if (status) {
+      query += " AND p.status = ?";
+      params.push(status);
+    }
+
+    query += ` ORDER BY p.year DESC,
+      FIELD(p.month, 'December', 'November', 'October', 'September', 'August',
+        'July', 'June', 'May', 'April', 'March', 'February', 'January'),
+      e.name`;
+
+    const [rows] = await pool.query(query, params);
+
+    res.status(200).json({
+      success: true,
+      count: rows.length,
+      data: rows,
+    });
+  } catch (error) {
+    console.error("Error fetching payroll payslips:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching payroll payslips",
+      error: error.message,
+    });
+  }
+};
+
+// Get single payroll payslip by id
+export const getPayrollPayslipById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const [rows] = await pool.query(
+      `SELECT p.*, e.name as employee_name, e.emp_id as employee_code
+       FROM payroll_payslips p
+       JOIN payroll_employees e ON p.emp_id = e.id
+       WHERE p.id = ?`,
+      [id],
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({
+        success: false,
+        message: "Payslip not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: rows[0],
+    });
+  } catch (error) {
+    console.error("Error fetching payroll payslip:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching payroll payslip",
+      error: error.message,
+    });
+  }
+};
+
 // Get salary components
 export const getSalaryComponents = async (req, res) => {
   try {
     const [rows] = await pool.query(
-      "SELECT * FROM salary_components WHERE is_active = TRUE ORDER BY component_type DESC, component_name"
+      "SELECT * FROM salary_components WHERE is_active = TRUE ORDER BY component_type DESC, component_name",
     );
 
     res.status(200).json({
@@ -420,7 +603,7 @@ export const getEmployeeSalaryStructure = async (req, res) => {
        INNER JOIN salary_components sc ON ess.component_id = sc.component_id
        WHERE ess.user_id = ? AND ess.is_active = TRUE
        ORDER BY sc.component_type DESC, sc.component_name`,
-      [userId]
+      [userId],
     );
 
     const earnings = rows.filter((r) => r.component_type === "Earning");
@@ -428,11 +611,11 @@ export const getEmployeeSalaryStructure = async (req, res) => {
 
     const totalEarnings = earnings.reduce(
       (sum, e) => sum + parseFloat(e.amount),
-      0
+      0,
     );
     const totalDeductions = deductions.reduce(
       (sum, d) => sum + parseFloat(d.amount),
-      0
+      0,
     );
 
     res.status(200).json({
@@ -472,7 +655,7 @@ export const getSalaryStatement = async (req, res) => {
       `SELECT id, name, emp_id, basic_salary, hra, pf_rate, tax_rate, created_at
        FROM payroll_employees
        WHERE emp_id = ?`,
-      [employee_id]
+      [employee_id],
     );
 
     if (!employeeData || employeeData.length === 0) {
@@ -510,7 +693,7 @@ export const getSalaryStatement = async (req, res) => {
        ORDER BY p.year, 
          FIELD(p.month, 'January', 'February', 'March', 'April', 'May', 'June', 
                         'July', 'August', 'September', 'October', 'November', 'December')`,
-      [employee_id, year]
+      [employee_id, year],
     );
 
     const formattedRecords = payrollRecords.map((record) => ({
@@ -544,19 +727,19 @@ export const getSalaryStatement = async (req, res) => {
       summary: {
         total_basic_salary: formattedRecords.reduce(
           (sum, r) => sum + r.basic_salary,
-          0
+          0,
         ),
         total_allowances: formattedRecords.reduce(
           (sum, r) => sum + r.allowances,
-          0
+          0,
         ),
         total_deductions: formattedRecords.reduce(
           (sum, r) => sum + r.deductions,
-          0
+          0,
         ),
         total_net_salary: formattedRecords.reduce(
           (sum, r) => sum + r.net_salary,
-          0
+          0,
         ),
       },
     });

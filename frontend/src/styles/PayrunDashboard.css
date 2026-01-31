@@ -7,12 +7,12 @@
   padding: 30px;
 }
 
-.dashboard-header {
+.payrun-header {
   text-align: center;
   margin-bottom: 40px;
 }
 
-.dashboard-header h1 {
+.payrun-header h1 {
   font-size: 2.5rem;
   color: #ffffff;
   margin-bottom: 10px;
@@ -123,7 +123,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Error Message */
@@ -194,22 +196,22 @@
 
 .status-badge.success {
   background: rgba(76, 175, 80, 0.2);
-  color: #4CAF50;
-  border: 1px solid #4CAF50;
+  color: #4caf50;
+  border: 1px solid #4caf50;
 }
 
 .status-badge.done {
   background: rgba(76, 175, 80, 0.2);
-  color: #4CAF50;
-  border: 1px solid #4CAF50;
+  color: #4caf50;
+  border: 1px solid #4caf50;
   padding: 5px 15px;
   font-size: 0.85rem;
 }
 
 .status-badge.pending {
   background: rgba(255, 152, 0, 0.2);
-  color: #FF9800;
-  border: 1px solid #FF9800;
+  color: #ff9800;
+  border: 1px solid #ff9800;
   padding: 5px 15px;
   font-size: 0.85rem;
 }
@@ -260,7 +262,7 @@
 }
 
 .stat-value.status {
-  color: #4CAF50;
+  color: #4caf50;
 }
 
 /* Payslips Section */
@@ -332,7 +334,7 @@
 
 .net-salary {
   font-weight: 700;
-  color: #4CAF50;
+  color: #4caf50;
   font-size: 1.05rem;
 }
 
@@ -412,7 +414,7 @@
     padding: 15px;
   }
 
-  .dashboard-header h1 {
+  .payrun-header h1 {
     font-size: 2rem;
   }
 
@@ -566,13 +568,15 @@
   font-weight: 600;
 }
 
-.details-grid {
+.payslip-container .details-grid,
+.payslip-section .details-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 15px;
 }
 
-.detail-item {
+.payslip-container .detail-item,
+.payslip-section .detail-item {
   display: flex;
   justify-content: space-between;
   padding: 10px;
@@ -580,12 +584,14 @@
   border-radius: 5px;
 }
 
-.detail-label {
+.payslip-container .detail-label,
+.payslip-section .detail-label {
   color: #666;
   font-weight: 500;
 }
 
-.detail-value {
+.payslip-container .detail-value,
+.payslip-section .detail-value {
   color: #333;
   font-weight: 600;
 }
@@ -703,7 +709,7 @@
 }
 
 .btn-print {
-  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
   color: white;
   border: none;
   padding: 15px 30px;
@@ -896,7 +902,7 @@
 }
 
 .btn-validate:disabled {
-  background: #4CAF50;
+  background: #4caf50;
   color: white;
   cursor: not-allowed;
   opacity: 0.9;
@@ -915,8 +921,8 @@
 
 .validation-message.success {
   background: rgba(76, 175, 80, 0.15);
-  color: #4CAF50;
-  border: 1px solid #4CAF50;
+  color: #4caf50;
+  border: 1px solid #4caf50;
 }
 
 .validation-message.error {
@@ -927,8 +933,8 @@
 
 .validation-message.info {
   background: rgba(33, 150, 243, 0.15);
-  color: #2196F3;
-  border: 1px solid #2196F3;
+  color: #2196f3;
+  border: 1px solid #2196f3;
 }
 
 @keyframes slideIn {
@@ -1189,7 +1195,9 @@
   border-bottom: 1px solid #2a2a2a;
 }
 
-.salary-computation-table tbody tr:hover:not(.section-header):not(.subtotal-row):not(.net-salary-row) {
+.salary-computation-table
+  tbody
+  tr:hover:not(.section-header):not(.subtotal-row):not(.net-salary-row) {
   background: #252525;
 }
 
@@ -1466,7 +1474,7 @@
 }
 
 .preview-value.highlight {
-  color: #4CAF50;
+  color: #4caf50;
   font-size: 1.1rem;
 }
 
@@ -1528,7 +1536,7 @@
 }
 
 .btn-generate {
-  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
   color: white;
 }
 
@@ -1822,4 +1830,42 @@
 
 .text-right {
   text-align: right;
+}
+
+/* =====================================================
+   Modern Theme Overrides
+   ===================================================== */
+
+.payrun-dashboard {
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.controls-section,
+.summary-card,
+.table-container,
+.payslip-modal,
+.payslip-modal-v2,
+.new-payslip-modal {
+  background: var(--bg-elevated);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.period-select,
+.employee-select-dropdown,
+.form-control {
+  background: var(--input-bg);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
+}
+
+.btn-run-payrun,
+.btn-view-payslip,
+.btn-action,
+.btn-generate,
+.btn-compute-form {
+  border-radius: 999px;
 }

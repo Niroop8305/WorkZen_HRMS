@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import api from "../services/api";
 import CreateUserModal from "../components/CreateUserModal";
 import EmployeeDetailsModal from "../components/EmployeeDetailsModal";
 import Sidebar from "../components/Sidebar";
@@ -84,15 +84,7 @@ const Dashboard = () => {
 
   const fetchAttendanceStatus = async () => {
     try {
-      const token = localStorage.getItem("workzen_token");
-      const response = await axios.get(
-        "http://localhost:5000/api/attendance/status",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await api.get("/attendance/status");
       setAttendanceStatus(response.data.data.status);
       setAttendanceData(response.data.data);
     } catch (error) {
@@ -102,15 +94,7 @@ const Dashboard = () => {
 
   const fetchActiveLeaves = async () => {
     try {
-      const token = localStorage.getItem("workzen_token");
-      const response = await axios.get(
-        "http://localhost:5000/api/leave/active-leaves",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await api.get("/leave/active-leaves");
       console.log("Active leaves response:", response.data);
       if (response.data.success) {
         console.log("Setting active leaves:", response.data.data);
@@ -124,15 +108,7 @@ const Dashboard = () => {
 
   const fetchAllEmployeesAttendance = async (employeeList) => {
     try {
-      const token = localStorage.getItem("workzen_token");
-      const response = await axios.get(
-        "http://localhost:5000/api/attendance/all-status",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await api.get("/attendance/all-status");
 
       console.log("All employees attendance response:", response.data);
 
@@ -161,21 +137,12 @@ const Dashboard = () => {
 
   const handleCheckInOut = async () => {
     try {
-      const token = localStorage.getItem("workzen_token");
       const endpoint =
         attendanceStatus === "checked_in"
-          ? "/api/attendance/check-out"
-          : "/api/attendance/check-in";
+          ? "/attendance/check-out"
+          : "/attendance/check-in";
 
-      const response = await axios.post(
-        `http://localhost:5000${endpoint}`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      const response = await api.post(endpoint, {});
 
       if (response.data.success) {
         setAttendanceStatus(response.data.data.status);
@@ -196,12 +163,7 @@ const Dashboard = () => {
   const fetchEmployees = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem("workzen_token");
-      const response = await axios.get("http://localhost:5000/api/users", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await api.get("/users");
       const employeeList = response.data.data || [];
       setEmployees(employeeList);
 
@@ -280,42 +242,42 @@ const Dashboard = () => {
       id: "employees",
       label: "Employees",
       hasSubItems: false,
-      path: null,
-      roles: ["Admin", "HR Manager", "Payroll Officer"],
+      path: "/dashboard",
+      roles: ["Admin", "HR Officer", "Payroll Officer"],
     },
     {
       id: "attendance",
       label: "Attendance",
       hasSubItems: false,
       path: "/attendance",
-      roles: ["Admin", "HR Manager", "Payroll Officer", "Employee"],
+      roles: ["Admin", "HR Officer", "Payroll Officer", "Employee"],
     },
     {
       id: "timeoff",
       label: "Time Off",
       hasSubItems: false,
-      path: null,
-      roles: ["Admin", "HR Manager", "Payroll Officer", "Employee"],
+      path: "/timeoff",
+      roles: ["Admin", "HR Officer", "Payroll Officer", "Employee"],
     },
     {
       id: "payroll",
       label: "Payroll",
       hasSubItems: false,
-      path: null,
-      roles: ["Admin", "HR Manager", "Payroll Officer", "Employee"],
+      path: "/payroll",
+      roles: ["Admin", "HR Officer", "Payroll Officer", "Employee"],
     },
     {
       id: "reports",
       label: "Reports",
       hasSubItems: false,
-      path: null,
-      roles: ["Admin", "HR Manager", "Payroll Officer"],
+      path: "/reports",
+      roles: ["Admin", "HR Officer", "Payroll Officer"],
     },
   ];
 
   // Filter nav items based on user role
   const navItems = allNavItems.filter((item) =>
-    item.roles.includes(user?.role || user?.roleName || "Employee")
+    item.roles.includes(user?.role || "Employee"),
   );
 
   const handleNavClick = (item) => {
@@ -336,7 +298,7 @@ const Dashboard = () => {
         {/* Top Header Bar */}
         <header className="dashboard-header">
           <div className="header-left">
-            {(user?.role === "Admin" || user?.roleName === "Admin") && (
+            {user?.role === "Admin" && (
               <button
                 className="btn-new"
                 onClick={() => setShowCreateUserModal(true)}

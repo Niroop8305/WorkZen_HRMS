@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
+import api from "../services/api";
 import "../styles/PayrunDashboard.css";
 
 const PayrunDashboard = () => {
@@ -199,7 +200,7 @@ const PayrunDashboard = () => {
     if (employee) {
       // Find existing payslip or create temporary one
       const existingPayslip = payrunData.payslips.find(
-        (p) => p.employee_id === empId
+        (p) => p.employee_id === empId,
       );
 
       if (existingPayslip) {
@@ -288,7 +289,7 @@ const PayrunDashboard = () => {
 
     if (
       !confirm(
-        "Are you sure you want to validate this payslip? This action will mark it as finalized."
+        "Are you sure you want to validate this payslip? This action will mark it as finalized.",
       )
     ) {
       return;
@@ -299,21 +300,11 @@ const PayrunDashboard = () => {
     setValidationMessage("⏳ Validating payslip...");
 
     try {
-      const response = await fetch(
-        `http://localhost:5000/api/payslip/${selectedPayslip.id}/validate`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+      const response = await api.post(
+        `/payslip/${selectedPayslip.id}/validate`,
       );
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to validate payslip");
-      }
+      const data = response.data;
 
       // Update the selected payslip with validated data
       setSelectedPayslip(data.payslip);
@@ -321,7 +312,7 @@ const PayrunDashboard = () => {
       // Update the payslip in the payrun data list
       if (payrunData?.payslips) {
         const updatedPayslips = payrunData.payslips.map((p) =>
-          p.id === selectedPayslip.id ? data.payslip : p
+          p.id === selectedPayslip.id ? data.payslip : p,
         );
         setPayrunData({
           ...payrunData,
@@ -336,7 +327,9 @@ const PayrunDashboard = () => {
       setTimeout(() => setValidationMessage(""), 3000);
     } catch (err) {
       // Error message
-      setValidationMessage(`❌ Error: ${err.message}`);
+      setValidationMessage(
+        `❌ Error: ${err.response?.data?.message || err.message}`,
+      );
       console.error("Validation error:", err);
 
       // Clear message after 5 seconds
@@ -471,7 +464,7 @@ const PayrunDashboard = () => {
     });
 
     alert(
-      `Payslip generated successfully for ${computedPayslip.employee_name}!`
+      `Payslip generated successfully for ${computedPayslip.employee_name}!`,
     );
     handleCloseNewPayslipForm();
   };
@@ -481,27 +474,17 @@ const PayrunDashboard = () => {
     setError(null);
 
     try {
-      const response = await fetch("http://localhost:5000/api/payrun/run", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          month: selectedMonth,
-          year: selectedYear,
-        }),
+      const response = await api.post("/payrun/run", {
+        month: selectedMonth,
+        year: selectedYear,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to run payrun");
-      }
+      const data = response.data;
 
       setPayrunData(data);
       setError(null);
     } catch (err) {
-      setError(err.message);
+      setError(err.response?.data?.message || err.message);
       setPayrunData(null);
     } finally {
       setIsLoading(false);
@@ -516,7 +499,7 @@ const PayrunDashboard = () => {
         <Header title="Payrun Dashboard" />
 
         <div className="payrun-dashboard">
-          <div className="dashboard-header">
+          <div className="payrun-header">
             <h1>🚀 Payroll Payrun Dashboard</h1>
             <p className="subtitle">
               Automatically generate payslips for all employees
@@ -656,15 +639,15 @@ const PayrunDashboard = () => {
                                 payslip.status === "Done"
                                   ? "done"
                                   : payslip.status === "Pending"
-                                  ? "pending"
-                                  : "draft"
+                                    ? "pending"
+                                    : "draft"
                               }`}
                             >
                               {payslip.status === "Done"
                                 ? "✅"
                                 : payslip.status === "Pending"
-                                ? "⏳"
-                                : "📝"}{" "}
+                                  ? "⏳"
+                                  : "📝"}{" "}
                               {payslip.status}
                             </span>
                           </td>
@@ -941,8 +924,8 @@ const PayrunDashboard = () => {
                       {isValidating
                         ? "⏳ Validating..."
                         : selectedPayslip?.status === "Done"
-                        ? "✅ Validated"
-                        : "Validate"}
+                          ? "✅ Validated"
+                          : "Validate"}
                     </button>
                     <button
                       className="btn-action btn-cancel"
@@ -965,8 +948,8 @@ const PayrunDashboard = () => {
                         validationMessage.includes("✅")
                           ? "success"
                           : validationMessage.includes("❌")
-                          ? "error"
-                          : "info"
+                            ? "error"
+                            : "info"
                       }`}
                     >
                       {validationMessage}
@@ -1208,14 +1191,14 @@ const PayrunDashboard = () => {
                               <td className="text-right">
                                 ₹{" "}
                                 {(selectedEmployeeForCompute.hra || 0).toFixed(
-                                  2
+                                  2,
                                 )}
                               </td>
                               <td className="text-right">1.00</td>
                               <td className="text-right">
                                 ₹{" "}
                                 {(selectedEmployeeForCompute.hra || 0).toFixed(
-                                  2
+                                  2,
                                 )}
                               </td>
                             </tr>
@@ -1277,14 +1260,14 @@ const PayrunDashboard = () => {
                                 <td className="text-right">
                                   ₹{" "}
                                   {selectedEmployeeForCompute.unpaid_deduction.toFixed(
-                                    2
+                                    2,
                                   )}
                                 </td>
                                 <td className="text-right">1.00</td>
                                 <td className="text-right">
                                   ₹{" "}
                                   {selectedEmployeeForCompute.unpaid_deduction.toFixed(
-                                    2
+                                    2,
                                   )}
                                 </td>
                               </tr>
@@ -1331,8 +1314,8 @@ const PayrunDashboard = () => {
                             In Words:{" "}
                             {convertToWords(
                               Math.round(
-                                selectedEmployeeForCompute.net_salary || 0
-                              )
+                                selectedEmployeeForCompute.net_salary || 0,
+                              ),
                             )}{" "}
                             Rupees Only
                           </p>
@@ -1396,7 +1379,7 @@ const PayrunDashboard = () => {
                           onChange={(e) =>
                             handleNewPayslipInputChange(
                               "basic_salary",
-                              parseFloat(e.target.value)
+                              parseFloat(e.target.value),
                             )
                           }
                           className="form-control"
@@ -1437,7 +1420,7 @@ const PayrunDashboard = () => {
                           onChange={(e) =>
                             handleNewPayslipInputChange(
                               "year",
-                              parseInt(e.target.value)
+                              parseInt(e.target.value),
                             )
                           }
                           className="form-control"
@@ -1462,7 +1445,7 @@ const PayrunDashboard = () => {
                           onChange={(e) =>
                             handleNewPayslipInputChange(
                               "total_working_days",
-                              parseInt(e.target.value)
+                              parseInt(e.target.value),
                             )
                           }
                           className="form-control"
@@ -1486,7 +1469,7 @@ const PayrunDashboard = () => {
                           onChange={(e) =>
                             handleNewPayslipInputChange(
                               "present_days",
-                              parseInt(e.target.value) || 0
+                              parseInt(e.target.value) || 0,
                             )
                           }
                           className="form-control"
@@ -1505,7 +1488,7 @@ const PayrunDashboard = () => {
                           onChange={(e) =>
                             handleNewPayslipInputChange(
                               "paid_leaves",
-                              parseInt(e.target.value) || 0
+                              parseInt(e.target.value) || 0,
                             )
                           }
                           className="form-control"
@@ -1523,7 +1506,7 @@ const PayrunDashboard = () => {
                           onChange={(e) =>
                             handleNewPayslipInputChange(
                               "unpaid_leaves",
-                              parseInt(e.target.value) || 0
+                              parseInt(e.target.value) || 0,
                             )
                           }
                           className="form-control"
