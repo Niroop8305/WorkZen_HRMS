@@ -19,23 +19,23 @@ const SignIn = () => {
   const demoAccounts = [
     {
       role: "Admin",
-      email: "admin@workzen.com",
-      password: "Admin@2025",
+      email: "admin@workzen.demo",
+      password: "Admin@123",
     },
     {
       role: "HR Officer",
-      email: "sarah.hr@workzen.com",
-      password: "Hr@2025",
+      email: "hr@workzen.demo",
+      password: "Hr@123",
     },
     {
       role: "Payroll Officer",
-      email: "finance@workzen.com",
-      password: "Payroll@2025",
+      email: "payroll@workzen.demo",
+      password: "Payroll@123",
     },
     {
       role: "Employee",
-      email: "john.dev@workzen.com",
-      password: "Employee@2025",
+      email: "employee@workzen.demo",
+      password: "Employee@123",
     },
   ];
 

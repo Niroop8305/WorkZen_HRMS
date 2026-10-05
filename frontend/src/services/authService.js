@@ -47,6 +47,24 @@ export const userService = {
 };
 
 export const attendanceService = {
+  // Get today's attendance state
+  getStatus: async () => {
+    const response = await api.get('/attendance/status');
+    return response.data;
+  },
+
+  // Check in for today
+  checkIn: async () => {
+    const response = await api.post('/attendance/check-in');
+    return response.data;
+  },
+
+  // Check out for today
+  checkOut: async () => {
+    const response = await api.post('/attendance/check-out');
+    return response.data;
+  },
+
   // Mark attendance
   markAttendance: async (attendanceData) => {
     const response = await api.post('/attendance/mark', attendanceData);
@@ -54,9 +72,9 @@ export const attendanceService = {
   },
 
   // Get my attendance logs
-  getMyLogs: async (month, year) => {
+  getMyLogs: async (month, year, page, limit) => {
     const response = await api.get('/attendance/my-logs', {
-      params: { month, year }
+      params: { month, year, page, limit }
     });
     return response.data;
   },

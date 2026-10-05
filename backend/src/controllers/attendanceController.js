@@ -1,4 +1,14 @@
 import pool from "../config/database.js";
+import {
+  checkIn as checkInAttendance,
+  checkOut as checkOutAttendance,
+  getAdminAttendance as getAdminAttendanceRecords,
+  streamAdminAttendanceExport,
+  getMyAttendance as getMyAttendanceRecords,
+  getAttendanceByDay as getAttendanceByDayRecords,
+  updateAttendance as updateAttendanceRecord,
+} from "../services/attendanceService.js";
+import { getBusinessNow } from "../config/attendance.js";
 
 // Mark attendance (Check-in/Check-out)
 export const markAttendance = async (req, res) => {
@@ -65,50 +75,18 @@ export const markAttendance = async (req, res) => {
 // Get user's own attendance logs
 export const getMyAttendance = async (req, res) => {
   try {
-    const { month, year, start_date, end_date } = req.query;
-    const userId = req.user.userId;
-
-    let query = `
-      SELECT 
-        a.attendance_id,
-        a.attendance_date,
-        a.check_in_time,
-        a.check_out_time,
-        a.total_hours,
-        a.status,
-        a.remarks,
-        DATE_FORMAT(a.attendance_date, '%Y-%m-%d') as date,
-        TIME_FORMAT(a.check_in_time, '%H:%i') as checkIn,
-        TIME_FORMAT(a.check_out_time, '%H:%i') as checkOut
-      FROM attendance a
-      WHERE a.user_id = ?
-    `;
-    const params = [userId];
-
-    if (start_date && end_date) {
-      query += " AND a.attendance_date BETWEEN ? AND ?";
-      params.push(start_date, end_date);
-    } else if (month && year) {
-      query +=
-        " AND MONTH(a.attendance_date) = ? AND YEAR(a.attendance_date) = ?";
-      params.push(month, year);
-    }
-
-    query += " ORDER BY a.attendance_date DESC";
-
-    const [rows] = await pool.query(query, params);
+    const result = await getMyAttendanceRecords(req.user.userId, req.query);
 
     res.status(200).json({
       success: true,
-      count: rows.length,
-      data: rows,
+      data: result.rows,
+      pagination: result.pagination,
     });
   } catch (error) {
     console.error("Error fetching attendance:", error);
-    res.status(500).json({
+    res.status(400).json({
       success: false,
-      message: "Error fetching attendance logs",
-      error: error.message,
+      message: error.message || "Error fetching attendance logs",
     });
   }
 };
@@ -116,52 +94,18 @@ export const getMyAttendance = async (req, res) => {
 // Get attendance for a specific day (Admin/HR only) - shows all employees present
 export const getAttendanceByDay = async (req, res) => {
   try {
-    const { date } = req.query;
-
-    if (!date) {
-      return res.status(400).json({
-        success: false,
-        message: "Date parameter is required",
-      });
-    }
-
-    const query = `
-      SELECT 
-        a.attendance_id,
-        a.user_id as userId,
-        a.attendance_date,
-        a.check_in_time,
-        a.check_out_time,
-        a.total_hours,
-        a.status,
-        a.remarks,
-        CONCAT(ep.first_name, ' ', COALESCE(ep.last_name, '')) AS userName,
-        ep.employee_code,
-        ep.department,
-        ep.designation,
-        DATE_FORMAT(a.attendance_date, '%Y-%m-%d') as date,
-        TIME_FORMAT(a.check_in_time, '%H:%i') as checkIn,
-        TIME_FORMAT(a.check_out_time, '%H:%i') as checkOut
-      FROM attendance a
-      INNER JOIN users u ON a.user_id = u.user_id
-      LEFT JOIN employee_profiles ep ON u.user_id = ep.user_id
-      WHERE a.attendance_date = ?
-      ORDER BY ep.employee_code, a.check_in_time
-    `;
-
-    const [rows] = await pool.query(query, [date]);
+    const result = await getAttendanceByDayRecords(req.query);
 
     res.status(200).json({
       success: true,
-      count: rows.length,
-      data: rows,
+      data: result.rows,
+      pagination: result.pagination,
     });
   } catch (error) {
     console.error("Error fetching attendance by day:", error);
-    res.status(500).json({
+    res.status(400).json({
       success: false,
-      message: "Error fetching attendance records",
-      error: error.message,
+      message: error.message || "Error fetching attendance records",
     });
   }
 };
@@ -169,66 +113,80 @@ export const getAttendanceByDay = async (req, res) => {
 // Get all attendance records (Admin/HR only)
 export const getAllAttendance = async (req, res) => {
   try {
-    const { month, year, userId, department, status } = req.query;
-
-    let query = `
-      SELECT 
-        a.attendance_id,
-        a.user_id,
-        a.attendance_date,
-        a.check_in_time,
-        a.check_out_time,
-        a.total_hours,
-        a.status,
-        a.remarks,
-        CONCAT(ep.first_name, ' ', COALESCE(ep.last_name, '')) AS employee_name,
-        ep.employee_code,
-        ep.department,
-        ep.designation,
-        u.email
-      FROM attendance a
-      INNER JOIN users u ON a.user_id = u.user_id
-      LEFT JOIN employee_profiles ep ON u.user_id = ep.user_id
-      WHERE 1=1
-    `;
-    const params = [];
-
-    if (userId) {
-      query += " AND a.user_id = ?";
-      params.push(userId);
-    }
-
-    if (department) {
-      query += " AND ep.department = ?";
-      params.push(department);
-    }
-
-    if (status) {
-      query += " AND a.status = ?";
-      params.push(status);
-    }
-
-    if (month && year) {
-      query +=
-        " AND MONTH(a.attendance_date) = ? AND YEAR(a.attendance_date) = ?";
-      params.push(month, year);
-    }
-
-    query += " ORDER BY a.attendance_date DESC, ep.employee_code";
-
-    const [rows] = await pool.query(query, params);
+    const result = await getAdminAttendanceRecords(req.query);
 
     res.status(200).json({
       success: true,
-      count: rows.length,
-      data: rows,
+      data: result.rows,
+      pagination: result.pagination,
     });
   } catch (error) {
     console.error("Error fetching all attendance:", error);
-    res.status(500).json({
+    res.status(400).json({
       success: false,
-      message: "Error fetching attendance records",
-      error: error.message,
+      message: error.message || "Error fetching attendance records",
+    });
+  }
+};
+
+export const exportAttendance = async (req, res) => {
+  let exportStream;
+  try {
+    const headers = [
+      "Employee ID",
+      "Employee Name",
+      "Department",
+      "Attendance Date",
+      "Check In",
+      "Check Out",
+      "Worked Hours",
+      "Worked Minutes",
+      "Late Minutes",
+      "Early Checkout Minutes",
+      "Status",
+    ];
+    const escapeCsv = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+    exportStream = await streamAdminAttendanceExport(req.query);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", "attachment; filename=attendance.csv");
+    res.write(`${headers.map(escapeCsv).join(",")}\n`);
+
+    exportStream.stream.on("data", (row) => {
+      res.write(
+        `${[
+          row.employee_code,
+          row.employee_name,
+          row.department,
+          row.attendance_date,
+          row.check_in_time,
+          row.check_out_time,
+          row.total_hours,
+          row.worked_minutes,
+          row.late_minutes,
+          row.early_checkout_minutes,
+          row.status,
+        ].map(escapeCsv).join(",")}\n`,
+      );
+    });
+    exportStream.stream.on("end", () => {
+      exportStream.release();
+      res.end();
+    });
+    exportStream.stream.on("error", (error) => {
+      exportStream.release();
+      console.error("Error streaming attendance export:", error);
+      if (!res.headersSent) {
+        res.status(500).json({ success: false, message: "Error exporting attendance records" });
+      } else {
+        res.destroy(error);
+      }
+    });
+  } catch (error) {
+    exportStream?.release();
+    console.error("Error exporting attendance:", error);
+    res.status(400).json({
+      success: false,
+      message: error.message || "Error exporting attendance records",
     });
   }
 };
@@ -361,41 +319,22 @@ export const getPayableDays = async (req, res) => {
 export const updateAttendance = async (req, res) => {
   try {
     const { attendanceId } = req.params;
-    const { check_in_time, check_out_time, status, remarks } = req.body;
-
-    // Calculate total hours if both times are provided
-    let totalHours = null;
-    if (check_in_time && check_out_time) {
-      const checkIn = new Date(`2000-01-01 ${check_in_time}`);
-      const checkOut = new Date(`2000-01-01 ${check_out_time}`);
-      const diffMs = checkOut - checkIn;
-      totalHours = (diffMs / (1000 * 60 * 60)).toFixed(2);
-    }
-
-    const [result] = await pool.query(
-      `UPDATE attendance 
-       SET check_in_time = ?, check_out_time = ?, total_hours = ?, status = ?, remarks = ?
-       WHERE attendance_id = ?`,
-      [check_in_time, check_out_time, totalHours, status, remarks, attendanceId]
-    );
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "Attendance record not found",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: "Attendance updated successfully",
+    const result = await updateAttendanceRecord({
+      attendanceId,
+      actor: {
+        userId: req.user.userId,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent"),
+      },
+      changes: req.body,
     });
+    res.status(result.statusCode).json(result.body);
   } catch (error) {
     console.error("Error updating attendance:", error);
-    res.status(500).json({
+    const isValidationError = /Attendance|attendance_date/.test(error.message || "");
+    res.status(isValidationError ? 400 : 500).json({
       success: false,
-      message: "Error updating attendance",
-      error: error.message,
+      message: isValidationError ? error.message : "Error updating attendance",
     });
   }
 };
@@ -435,76 +374,15 @@ export const deleteAttendance = async (req, res) => {
 // @route   POST /api/attendance/check-in
 // @access  Private
 export const checkIn = async (req, res) => {
-  const connection = await pool.getConnection();
   try {
-    const userId = req.user.userId;
-    const today = new Date().toISOString().split("T")[0];
-    const currentDateTime = new Date();
-
-    // Format datetime for MySQL
-    const formatDateTime = (date) => {
-      return date.toISOString().slice(0, 19).replace("T", " ");
-    };
-
-    console.log("Check-in request:", {
-      userId,
-      today,
-      currentDateTime: formatDateTime(currentDateTime),
-    });
-
-    // Check if there's an active check-in (not yet checked out)
-    const [existing] = await connection.query(
-      `SELECT * FROM attendance 
-       WHERE user_id = ? 
-       AND attendance_date = ? 
-       AND check_in_time IS NOT NULL 
-       AND check_out_time IS NULL
-       ORDER BY check_in_time DESC
-       LIMIT 1`,
-      [userId, today]
-    );
-
-    if (existing.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: "You are currently checked in. Please check out first.",
-        data: {
-          attendance_id: existing[0].attendance_id,
-          check_in_time: existing[0].check_in_time,
-          check_out_time: existing[0].check_out_time,
-        },
-      });
-    }
-
-    // Insert new check-in record
-    const [result] = await connection.query(
-      `INSERT INTO attendance (user_id, attendance_date, check_in_time, status)
-       VALUES (?, ?, ?, 'Present')`,
-      [userId, today, formatDateTime(currentDateTime)]
-    );
-
-    console.log("Check-in successful:", result.insertId);
-
-    res.status(200).json({
-      success: true,
-      message: "Checked in successfully",
-      data: {
-        attendance_id: result.insertId,
-        attendance_date: today,
-        check_in_time: formatDateTime(currentDateTime),
-        status: "checked_in",
-      },
-    });
+    const result = await checkInAttendance(req.user.userId);
+    res.status(result.statusCode).json(result.body);
   } catch (error) {
     console.error("Error during check-in:", error);
-    console.error("Error stack:", error.stack);
     res.status(500).json({
       success: false,
       message: "Error during check-in",
-      error: error.message,
     });
-  } finally {
-    connection.release();
   }
 };
 
@@ -512,122 +390,15 @@ export const checkIn = async (req, res) => {
 // @route   POST /api/attendance/check-out
 // @access  Private
 export const checkOut = async (req, res) => {
-  const connection = await pool.getConnection();
   try {
-    const userId = req.user.userId;
-    const today = new Date().toISOString().split("T")[0];
-    const currentDateTime = new Date();
-
-    // Format datetime for MySQL
-    const formatDateTime = (date) => {
-      return date.toISOString().slice(0, 19).replace("T", " ");
-    };
-
-    console.log("Check-out request:", {
-      userId,
-      today,
-      currentDateTime: formatDateTime(currentDateTime),
-    });
-
-    // Find the active check-in (without check-out)
-    // Look for records from today OR yesterday (in case of overnight shifts)
-    const [existing] = await connection.query(
-      `SELECT * FROM attendance 
-       WHERE user_id = ? 
-       AND check_in_time IS NOT NULL 
-       AND check_out_time IS NULL
-       AND attendance_date >= DATE_SUB(?, INTERVAL 1 DAY)
-       ORDER BY check_in_time DESC
-       LIMIT 1`,
-      [userId, today]
-    );
-
-    console.log("Found existing attendance:", existing);
-
-    if (!existing || existing.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "You need to check in first",
-      });
-    }
-
-    const attendance = existing[0];
-
-    // Calculate total hours
-    // Combine attendance_date with check_in_time to get full datetime
-    let checkInTime;
-    if (attendance.check_in_time instanceof Date) {
-      checkInTime = attendance.check_in_time;
-    } else {
-      // If check_in_time is stored as TIME, combine with attendance_date
-      const dateStr = new Date(attendance.attendance_date)
-        .toISOString()
-        .split("T")[0];
-      const timeStr =
-        typeof attendance.check_in_time === "string"
-          ? attendance.check_in_time
-          : attendance.check_in_time.toString();
-      checkInTime = new Date(`${dateStr} ${timeStr}`);
-    }
-
-    const checkOutTime = currentDateTime;
-    const diffMs = checkOutTime - checkInTime;
-    const totalHours = Math.max(0, diffMs / (1000 * 60 * 60)).toFixed(2);
-
-    console.log("Calculating hours:", {
-      checkInTime: checkInTime.toISOString(),
-      checkOutTime: formatDateTime(checkOutTime),
-      diffMs,
-      totalHours,
-    });
-
-    // Validate totalHours is a valid number
-    if (isNaN(totalHours) || !isFinite(totalHours)) {
-      console.error("Invalid total hours calculated:", {
-        totalHours,
-        diffMs,
-        checkInTime,
-        checkOutTime,
-      });
-      return res.status(500).json({
-        success: false,
-        message:
-          "Error calculating work hours. Please try again or contact support.",
-      });
-    }
-
-    // Update check-out
-    const [updateResult] = await connection.query(
-      `UPDATE attendance 
-       SET check_out_time = ?, total_hours = ?
-       WHERE attendance_id = ?`,
-      [formatDateTime(currentDateTime), totalHours, attendance.attendance_id]
-    );
-
-    console.log("Update result:", updateResult);
-
-    res.status(200).json({
-      success: true,
-      message: "Checked out successfully",
-      data: {
-        attendance_id: attendance.attendance_id,
-        attendance_date: today,
-        check_in_time: attendance.check_in_time,
-        check_out_time: formatDateTime(currentDateTime),
-        total_hours: totalHours,
-        status: "checked_out",
-      },
-    });
+    const result = await checkOutAttendance(req.user.userId);
+    res.status(result.statusCode).json(result.body);
   } catch (error) {
     console.error("Error during check-out:", error);
-    console.error("Error stack:", error.stack);
     res.status(500).json({
       success: false,
       message: "Error during check-out",
-      error: error.message,
     });
-  } finally {
-    connection.release();
   }
 };
 
@@ -637,7 +408,7 @@ export const checkOut = async (req, res) => {
 export const getAttendanceStatus = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const today = new Date().toISOString().split("T")[0];
+    const today = getBusinessNow().date;
 
     // Get the latest attendance record for today
     const [rows] = await pool.query(
@@ -678,6 +449,10 @@ export const getAttendanceStatus = async (req, res) => {
         check_in_time: attendance.check_in_time,
         check_out_time: attendance.check_out_time,
         total_hours: attendance.total_hours,
+        worked_minutes: attendance.worked_minutes,
+        late_minutes: attendance.late_minutes,
+        early_checkout_minutes: attendance.early_checkout_minutes,
+        attendance_status: attendance.status,
       },
     });
   } catch (error) {

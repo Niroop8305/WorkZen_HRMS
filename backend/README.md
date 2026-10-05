@@ -71,6 +71,17 @@ Smart Human Resource Management System - Backend API
 
    Server runs on: `http://localhost:5000`
 
+   ## Demo Users
+
+   Run `npm run seed:demo` to create or refresh local demo accounts:
+
+   | Role | Email | Password |
+   |---|---|---|
+   | Admin | `admin@workzen.demo` | `Admin@123` |
+   | HR Officer | `hr@workzen.demo` | `Hr@123` |
+   | Payroll Officer | `payroll@workzen.demo` | `Payroll@123` |
+   | Employee | `employee@workzen.demo` | `Employee@123` |
+
 ## API Endpoints
 
 ### Authentication (`/api/auth`)
@@ -89,10 +100,24 @@ Smart Human Resource Management System - Backend API
 
 ### Attendance (`/api/attendance`)
 
-- `POST /mark` - Mark attendance
-- `GET /my-logs` - Get my attendance logs
-- `GET /all` - Get all attendance (Admin/HR)
-- `GET /summary` - Get monthly summary
+- `POST /check-in` - Employee check-in
+- `POST /check-out` - Employee check-out
+- `GET /status` - Current employee status
+- `GET /today` - Today's employee records
+- `GET /my-logs` - Paginated employee history
+- `GET /summary` - Monthly employee summary
+- `GET /day` - Paginated daily records for HR/Admin/Payroll
+- `GET /all` - Paginated HR/Admin records with filters
+- `GET /export` - Filtered CSV export for HR/Admin
+- `PUT /:attendanceId` - Audited HR/Admin correction
+- `DELETE /:attendanceId` - Admin deletion
+
+Admin list filters include `page`, `limit`, `search`, `status`, `department`,
+`startDate`, and `endDate`. The maximum page size is 100.
+
+Attendance rules default to `Asia/Kolkata`, 09:00 expected start, 18:00
+expected end, 15-minute late grace, and a 240-minute half-day threshold.
+Override them with the `APP_TIMEZONE` and `ATTENDANCE_*` environment variables.
 
 ### Leave (`/api/leave`)
 

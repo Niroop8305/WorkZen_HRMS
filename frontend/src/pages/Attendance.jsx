@@ -80,6 +80,20 @@ const Attendance = () => {
   const [records, setRecords] = useState([]);
   const [activeSection, setActiveSection] = useState("attendance");
   const [activeLeaves, setActiveLeaves] = useState({});
+  const [adminFilters, setAdminFilters] = useState({
+    search: "",
+    status: "",
+    department: "",
+    startDate: "",
+    endDate: "",
+  });
+  const [adminPage, setAdminPage] = useState(1);
+  const [adminPagination, setAdminPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0,
+  });
 
   const isPrivileged = useMemo(() => {
     const role = user?.role || "";
@@ -100,11 +114,14 @@ const Attendance = () => {
 
     const load = async () => {
       try {
-        // Fetch active leaves
+        // Active leave indicators are optional and must not block attendance data.
         if (isPrivileged) {
-          const leavesResp = await api.get("/leave/active-leaves");
-          console.log("Attendance - Active leaves response:", leavesResp.data);
-          setActiveLeaves(leavesResp.data?.data || {});
+          try {
+            const leavesResp = await api.get("/leave/active-leaves");
+            setActiveLeaves(leavesResp.data?.data || {});
+          } catch {
+            setActiveLeaves({});
+          }
         }
 
         if (view === "month" && user) {
@@ -118,9 +135,26 @@ const Attendance = () => {
         } else if (view === "day") {
           const d = formatDateISO(date);
           if (isPrivileged) {
-            // Privileged users: fetch all attendance for a given day
-            const resp = await api.get(`/attendance/day?date=${d}`);
+            const resp = await api.get("/attendance/all", {
+              params: {
+                page: adminPage,
+                limit: adminPagination.limit,
+                search: adminFilters.search || undefined,
+                status: adminFilters.status || undefined,
+                department: adminFilters.department || undefined,
+                startDate: adminFilters.startDate || d,
+                endDate: adminFilters.endDate || d,
+              },
+            });
             setRecords(resp.data?.data || []);
+            setAdminPagination(
+              resp.data?.pagination || {
+                page: adminPage,
+                limit: adminPagination.limit,
+                total: 0,
+                totalPages: 0,
+              },
+            );
           } else if (user) {
             // Employee viewing a single day
             const resp = await api.get(
@@ -141,7 +175,35 @@ const Attendance = () => {
     };
 
     load();
-  }, [date, view, user, isPrivileged]);
+  }, [date, view, user, isPrivileged, adminFilters, adminPage]);
+
+  const updateAdminFilter = (field, value) => {
+    setAdminPage(1);
+    setAdminFilters((current) => ({ ...current, [field]: value }));
+  };
+
+  const exportAdminAttendance = async () => {
+    try {
+      const response = await api.get("/attendance/export", {
+        params: {
+          search: adminFilters.search || undefined,
+          status: adminFilters.status || undefined,
+          department: adminFilters.department || undefined,
+          startDate: adminFilters.startDate || formatDateISO(date),
+          endDate: adminFilters.endDate || formatDateISO(date),
+        },
+        responseType: "blob",
+      });
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "attendance.csv";
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to export attendance");
+    }
+  };
 
   const gotoPrev = () =>
     setDate((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1));
@@ -235,6 +297,48 @@ const Attendance = () => {
               <option value="sunday">Sunday</option>
             </select>
           </div>
+          {isPrivileged && (
+            <div className="attendance-admin-filters">
+              <input
+                type="search"
+                placeholder="Search employee"
+                value={adminFilters.search}
+                onChange={(event) => updateAdminFilter("search", event.target.value)}
+              />
+              <select
+                value={adminFilters.status}
+                onChange={(event) => updateAdminFilter("status", event.target.value)}
+              >
+                <option value="">All statuses</option>
+                <option value="Present">Present</option>
+                <option value="Late">Late</option>
+                <option value="Half-Day">Half-Day</option>
+                <option value="Absent">Absent</option>
+                <option value="On Leave">On Leave</option>
+              </select>
+              <input
+                type="text"
+                placeholder="Department"
+                value={adminFilters.department}
+                onChange={(event) => updateAdminFilter("department", event.target.value)}
+              />
+              <input
+                type="date"
+                aria-label="Start date"
+                value={adminFilters.startDate}
+                onChange={(event) => updateAdminFilter("startDate", event.target.value)}
+              />
+              <input
+                type="date"
+                aria-label="End date"
+                value={adminFilters.endDate}
+                onChange={(event) => updateAdminFilter("endDate", event.target.value)}
+              />
+              <button type="button" onClick={exportAdminAttendance}>
+                Export CSV
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Content Area */}
@@ -260,6 +364,11 @@ const Attendance = () => {
                   month: "long",
                 })} ${date.getFullYear()}`}
               </div>
+              {isPrivileged && (
+                <div className="attendance-pagination-summary">
+                  {adminPagination.total} records
+                </div>
+              )}
 
               <table className="data-table">
                 <thead>
@@ -269,12 +378,13 @@ const Attendance = () => {
                     <th>Check Out</th>
                     <th>Work Hours</th>
                     <th>Extra hours</th>
+                    <th>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {records.length === 0 && (
                     <tr>
-                      <td colSpan="5" className="no-data">
+                      <td colSpan="6" className="no-data">
                         No records
                       </td>
                     </tr>
@@ -313,6 +423,7 @@ const Attendance = () => {
                             ? `${parseFloat(workHours).toFixed(2)}`
                             : "00:00"}
                         </td>
+                          <td>{r.status || "-"}</td>
                         <td>
                           {extraHours > 0
                             ? `${parseFloat(extraHours).toFixed(2)}`
@@ -323,6 +434,27 @@ const Attendance = () => {
                   })}
                 </tbody>
               </table>
+              {isPrivileged && adminPagination.totalPages > 0 && (
+                <div className="attendance-pagination">
+                  <button
+                    type="button"
+                    disabled={adminPage <= 1}
+                    onClick={() => setAdminPage((pageNumber) => pageNumber - 1)}
+                  >
+                    Previous
+                  </button>
+                  <span>
+                    Page {adminPagination.page} of {adminPagination.totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={adminPage >= adminPagination.totalPages}
+                    onClick={() => setAdminPage((pageNumber) => pageNumber + 1)}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
