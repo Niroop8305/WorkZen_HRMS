@@ -14,6 +14,7 @@ import {
   getAttendanceStatus,
   getAllEmployeesAttendanceStatus,
   getTodayAttendance,
+  exportAttendance,
 } from "../controllers/attendanceController.js";
 
 const router = express.Router();
@@ -36,6 +37,12 @@ router.get(
   protect,
   authorize("Admin", "HR Officer", "Payroll Officer"),
   getAttendanceByDay
+);
+router.get(
+  "/export",
+  protect,
+  authorize("Admin", "HR Officer"),
+  exportAttendance
 );
 router.get("/all", protect, authorize("Admin", "HR Officer"), getAllAttendance);
 router.get(

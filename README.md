@@ -96,15 +96,20 @@ WorkZen aims to provide a clean, reliable, and user-friendly experience for both
 - Payroll (structure, components, processing)
 - Audit logs for accountability
 
-### 🚧 Ready for Implementation (Phase 2)
+### ✅ Attendance Milestone 1 Complete
 
 #### Attendance Management
 
-- Mark daily attendance (check-in/check-out)
-- View attendance logs (daily/monthly)
-- Attendance summary and reports
-- Late/absent/half-day tracking
-- Admin overview of all attendance
+- Timezone-aware check-in/check-out using configurable attendance rules
+- Server-side worked-minute, late-minute, early-checkout, and status calculations
+- One attendance record per employee per business date
+- Employee attendance history with server-side pagination
+- Admin/HR search, status, department, date-range filters, and pagination
+- Backend-streamed CSV export
+- Transaction-safe checkout and audited manual attendance corrections
+- Automated service/database tests and live API verification
+
+### 🚧 Remaining Modules
 
 #### Leave Management
 
@@ -212,9 +217,23 @@ Frontend runs on: `http://localhost:5173`
 
 ### First Time Setup
 
-1. Navigate to `http://localhost:5173/signup`
-2. Register as Admin with your details
-3. Login and access the dashboard
+1. Seed the local demo users:
+
+   ```bash
+   cd backend
+   npm run seed:demo
+   ```
+
+2. Navigate to `http://localhost:5173/login` and use a demo account below.
+
+### Demo Accounts
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | `admin@workzen.demo` | `Admin@123` |
+| HR Officer | `hr@workzen.demo` | `Hr@123` |
+| Payroll Officer | `payroll@workzen.demo` | `Payroll@123` |
+| Employee | `employee@workzen.demo` | `Employee@123` |
 
 ## 📊 Database Schema
 
@@ -263,10 +282,17 @@ payroll ←→ payroll_details (One-to-Many)
 
 ### Attendance
 
-- `POST /api/attendance/mark` - Mark attendance
-- `GET /api/attendance/my-logs` - Get my logs
-- `GET /api/attendance/all` - Get all (Admin/HR)
-- `GET /api/attendance/summary` - Monthly summary
+- `POST /api/attendance/check-in` - Employee check-in
+- `POST /api/attendance/check-out` - Employee check-out
+- `GET /api/attendance/status` - Current employee status
+- `GET /api/attendance/today` - Today's employee records
+- `GET /api/attendance/my-logs` - Paginated employee history
+- `GET /api/attendance/summary` - Monthly employee summary
+- `GET /api/attendance/day` - Paginated HR/Admin daily records
+- `GET /api/attendance/all` - Paginated HR/Admin records with filters
+- `GET /api/attendance/export` - Filtered CSV export
+- `PUT /api/attendance/:attendanceId` - Audited HR/Admin correction
+- `DELETE /api/attendance/:attendanceId` - Admin deletion
 
 ### Leave
 
@@ -355,7 +381,7 @@ curl http://localhost:5000/api/health
 ```bash
 curl -X POST http://localhost:5000/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@workzen.com","password":"password123"}'
+  -d '{"email":"admin@workzen.demo","password":"Admin@123"}'
 ```
 
 ## 🤝 Contributing

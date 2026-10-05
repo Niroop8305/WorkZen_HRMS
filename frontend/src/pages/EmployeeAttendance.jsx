@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import { attendanceService } from "../services/authService";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import "../styles/App.css";
@@ -32,6 +33,15 @@ const EmployeeAttendance = () => {
     leavesCount: 0,
     totalWorkingDays: 0,
   });
+  const [todayStatus, setTodayStatus] = useState(null);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0,
+  });
 
   useEffect(() => {
     if (!user) return;
@@ -46,10 +56,11 @@ const EmployeeAttendance = () => {
 
         // Fetch attendance records
         const resp = await api.get(
-          `/attendance/my-logs?month=${month}&year=${year}`
+          `/attendance/my-logs?month=${month}&year=${year}&page=${page}&limit=${pagination.limit}`
         );
         const attendanceData = resp.data?.data || [];
         setRecords(attendanceData);
+        setPagination(resp.data?.pagination || pagination);
 
         // Calculate summary
         const presentDays = attendanceData.filter(
@@ -100,13 +111,49 @@ const EmployeeAttendance = () => {
     };
 
     fetchData();
-  }, [date, user]);
+  }, [date, user, page]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchTodayStatus = async () => {
+      try {
+        const response = await attendanceService.getStatus();
+        setTodayStatus(response.data || null);
+      } catch (err) {
+        setError(err.response?.data?.message || "Failed to load today's attendance status");
+      }
+    };
+
+    fetchTodayStatus();
+  }, [user]);
+
+  const handleAttendanceAction = async (action) => {
+    try {
+      setActionLoading(true);
+      setError(null);
+      await attendanceService[action]();
+      const statusResponse = await attendanceService.getStatus();
+      setTodayStatus(statusResponse.data || null);
+      const month = date.getMonth() + 1;
+      const year = date.getFullYear();
+      const logsResponse = await attendanceService.getMyLogs(month, year, page, pagination.limit);
+      setRecords(logsResponse.data || []);
+      setPagination(logsResponse.pagination || pagination);
+    } catch (err) {
+      setError(err.response?.data?.message || "Attendance action failed");
+    } finally {
+      setActionLoading(false);
+    }
+  };
 
   const gotoPrevMonth = () => {
+    setPage(1);
     setDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
   };
 
   const gotoNextMonth = () => {
+    setPage(1);
     setDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
   };
 
@@ -114,6 +161,7 @@ const EmployeeAttendance = () => {
     const val = e.target.value;
     if (!val) return;
     const [year, month] = val.split("-");
+    setPage(1);
     setDate(new Date(parseInt(year), parseInt(month) - 1, 1));
   };
 
@@ -196,6 +244,35 @@ const EmployeeAttendance = () => {
             value={monthInputValue()}
             onChange={onMonthChange}
           />
+        </div>
+
+        <div className="ea-today-status">
+          <div>
+            <strong>Today:</strong>{" "}
+            {todayStatus?.status === "checked_in"
+              ? "Checked in"
+              : todayStatus?.status === "checked_out"
+                ? "Checked out"
+                : "Not checked in"}
+            {todayStatus?.worked_minutes != null &&
+              ` - ${todayStatus.worked_minutes} minutes worked`}
+          </div>
+          <div className="ea-attendance-actions">
+            <button
+              type="button"
+              onClick={() => handleAttendanceAction("checkIn")}
+              disabled={actionLoading || todayStatus?.status !== "not_checked_in"}
+            >
+              {actionLoading ? "Working..." : "Check in"}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleAttendanceAction("checkOut")}
+              disabled={actionLoading || todayStatus?.status !== "checked_in"}
+            >
+              Check out
+            </button>
+          </div>
         </div>
 
         {/* Summary Cards */}
@@ -297,6 +374,27 @@ const EmployeeAttendance = () => {
                 )}
               </tbody>
             </table>
+          </div>
+        )}
+        {!loading && pagination.totalPages > 0 && (
+          <div className="attendance-pagination">
+            <button
+              type="button"
+              disabled={page <= 1}
+              onClick={() => setPage((currentPage) => currentPage - 1)}
+            >
+              Previous
+            </button>
+            <span>
+              Page {pagination.page} of {pagination.totalPages} ({pagination.total} records)
+            </span>
+            <button
+              type="button"
+              disabled={page >= pagination.totalPages}
+              onClick={() => setPage((currentPage) => currentPage + 1)}
+            >
+              Next
+            </button>
           </div>
         )}
       </div>

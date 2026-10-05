@@ -41,6 +41,18 @@ Smart Human Resource Management System - Frontend Application
 
 ## Features
 
+### Demo Login Accounts
+
+The login screen includes seeded local demo accounts. From `backend`, run
+`npm run seed:demo` before signing in:
+
+| Role | Email | Password |
+|---|---|---|
+| Admin | `admin@workzen.demo` | `Admin@123` |
+| HR Officer | `hr@workzen.demo` | `Hr@123` |
+| Payroll Officer | `payroll@workzen.demo` | `Payroll@123` |
+| Employee | `employee@workzen.demo` | `Employee@123` |
+
 ### Authentication
 - ✅ Sign In page with email/password
 - ✅ Sign Up page for admin registration
@@ -191,7 +203,9 @@ All API calls go through the `api.js` service which:
 
 ## Future Enhancements
 
-- [ ] Attendance marking interface
+- [x] Employee attendance check-in/check-out interface
+- [x] Paginated employee and HR/Admin attendance history
+- [x] Attendance search, filters, and CSV export
 - [ ] Leave application forms
 - [ ] Payroll viewing
 - [ ] Profile editing
