@@ -15,8 +15,6 @@ import EmployeeAttendance from "./pages/EmployeeAttendance";
 import TimeOff from "./pages/TimeOff";
 import Reports from "./pages/Reports";
 import PayrollPage from "./pages/PayrollPage";
-import PayrunDashboard from "./pages/PayrunDashboard";
-import Payslip from "./pages/Payslip";
 import "./styles/App.css";
 
 function App() {
@@ -94,26 +92,6 @@ function App() {
               element={
                 <ProtectedRoute>
                   <PayrollPage />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Payslip Detail */}
-            <Route
-              path="/payroll/payslip/:payrollId"
-              element={
-                <ProtectedRoute allowedRoles={["Admin", "Payroll Officer"]}>
-                  <Payslip />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* Payrun Dashboard */}
-            <Route
-              path="/payrun"
-              element={
-                <ProtectedRoute allowedRoles={["Admin", "Payroll Officer"]}>
-                  <PayrunDashboard />
                 </ProtectedRoute>
               }
             />

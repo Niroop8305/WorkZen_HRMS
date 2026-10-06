@@ -178,8 +178,20 @@ paid balance.
 - `GET /payslip/:payrollId` - Get detailed payslip
 - `GET /all` - Get all payroll (Admin/Payroll Officer)
 - `POST /generate` - Generate payroll (Admin/Payroll Officer)
-- `PUT /:payrollId/status` - Update payment status
-- `GET /components` - Get salary components
+- `PUT /:payrollId/status` - Update payment status (Admin/Payroll Officer)
+- `GET /components` - Get salary components (Admin/Payroll Officer)
+- `GET /salary-structure/:userId` - Get an employee's salary structure (Admin/Payroll Officer)
+
+These are the only mounted payroll routes. The legacy payroll world
+(`/api/payrun/*`, `/api/payslip/*`, `/api/employees/*`, and the duplicate
+`/api/payroll/payslips` and `/api/payroll/salary-statement` endpoints) was
+decommissioned in Payroll Milestone 1 and now returns a deliberate `404`. Its
+backing tables (`payroll_employees`, `payroll_payslips`, `payroll_payruns`,
+`payroll_attendance`) do not exist in the live database and must not be
+recreated. `src/database/payroll_schema.sql` and `payslips_migration.sql` are
+retained as deprecated historical documentation only — never execute them.
+Payroll calculation, salary structure, and payslip generation remain future
+milestones; payroll generation is not yet complete.
 
 ### Dashboard (`/api/dashboard`)
 

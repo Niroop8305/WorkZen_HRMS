@@ -1,3 +1,16 @@
+-- =============================================================================
+-- DEPRECATED / HISTORICAL — DO NOT EXECUTE
+-- -----------------------------------------------------------------------------
+-- This migration targets the legacy unprefixed `payslips` table, which belongs
+-- to the retired Payroll architecture (see payroll_schema.sql). It was decommissioned
+-- in Payroll Milestone 1. The primary/authoritative Payroll schema lives in
+-- schema.sql (tables: salary_components, employee_salary_structure, payroll,
+-- payroll_details) and must NOT be touched by this script.
+--
+-- This file is retained only as historical documentation. Do not run it against
+-- any environment. The legacy tables it references must never be recreated.
+-- =============================================================================
+
 -- Migration script to update payslips table for standalone payslips
 -- Run this script if you have existing database
 

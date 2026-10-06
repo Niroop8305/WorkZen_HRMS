@@ -309,10 +309,19 @@ payroll ←→ payroll_details (One-to-Many)
 ### Payroll
 
 - `GET /api/payroll/my-payroll` - Get my payroll
-- `GET /api/payroll/payslip/:id` - Get payslip
-- `GET /api/payroll/all` - Get all (Admin/Payroll)
-- `POST /api/payroll/generate` - Generate payroll
-- `PUT /api/payroll/:id/status` - Update status
+- `GET /api/payroll/payslip/:id` - Get detailed payslip
+- `GET /api/payroll/all` - Get all payroll (Admin/Payroll Officer)
+- `POST /api/payroll/generate` - Generate payroll (Admin/Payroll Officer)
+- `PUT /api/payroll/:id/status` - Update payment status (Admin/Payroll Officer)
+- `GET /api/payroll/components` - Get salary components (Admin/Payroll Officer)
+- `GET /api/payroll/salary-structure/:userId` - Get an employee's salary structure (Admin/Payroll Officer)
+
+The legacy payroll architecture (`/api/payrun/*`, `/api/payslip/*`,
+`/api/employees/*`, and the duplicate `/api/payroll/payslips` and
+`/api/payroll/salary-statement` endpoints) was decommissioned in Payroll
+Milestone 1 and now returns a deliberate `404`. Payroll calculation, salary
+structure, and payslip generation are future milestones; payroll generation is
+not yet complete.
 
 ### Dashboard
 

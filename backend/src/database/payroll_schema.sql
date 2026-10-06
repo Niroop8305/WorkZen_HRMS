@@ -1,3 +1,19 @@
+-- =============================================================================
+-- DEPRECATED / HISTORICAL — DO NOT EXECUTE
+-- -----------------------------------------------------------------------------
+-- This is the LEGACY Payroll schema. It was decommissioned in Payroll
+-- Milestone 1. It creates unprefixed tables (employees, attendance, payruns,
+-- payslips) that CONFLICT with the authoritative schema.sql — notably it
+-- redefines an `attendance` table incompatible with the frozen Attendance
+-- module. No runtime code queries these tables.
+--
+-- The primary/authoritative Payroll schema is schema.sql, which defines:
+--   salary_components, employee_salary_structure, payroll, payroll_details.
+--
+-- NEVER run this script. NEVER recreate these legacy tables. Retained purely
+-- as historical documentation.
+-- =============================================================================
+
 -- Payroll System Database Schema
 
 -- Employees Table

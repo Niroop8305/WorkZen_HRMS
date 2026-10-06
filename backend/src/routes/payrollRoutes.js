@@ -6,13 +6,18 @@ import {
   getAllPayroll,
   generatePayroll,
   updatePayrollStatus,
-  getSalaryComponents,
-  getEmployeeSalaryStructure,
-  getSalaryStatement,
-  getPayrollPayslips,
-  getPayrollPayslipById,
-  createPayrollPayslip,
 } from "../controllers/payrollController.js";
+import {
+  getSalaryComponents,
+  createSalaryComponentHandler,
+  updateSalaryComponentHandler,
+  setSalaryComponentStatusHandler,
+  getEmployeeSalaryStructure,
+  getSalaryStructureAsOfHandler,
+  assignSalaryStructureHandler,
+  updateSalaryStructureHandler,
+  removeSalaryStructureHandler,
+} from "../controllers/salaryController.js";
 
 const router = express.Router();
 
@@ -39,11 +44,41 @@ router.put(
   authorize("Admin", "Payroll Officer"),
   updatePayrollStatus,
 );
+
+// Salary component configuration (Milestone 2)
 router.get(
   "/components",
   protect,
   authorize("Admin", "Payroll Officer"),
   getSalaryComponents,
+);
+router.post(
+  "/components",
+  protect,
+  authorize("Admin", "Payroll Officer"),
+  createSalaryComponentHandler,
+);
+router.put(
+  "/components/:componentId",
+  protect,
+  authorize("Admin", "Payroll Officer"),
+  updateSalaryComponentHandler,
+);
+router.patch(
+  "/components/:componentId/status",
+  protect,
+  authorize("Admin", "Payroll Officer"),
+  setSalaryComponentStatusHandler,
+);
+
+// Employee salary structures (Milestone 2, effective-dated).
+// Version mutations key on structure_id because a single user+component can
+// hold multiple non-overlapping effective-dated versions.
+router.get(
+  "/salary-structure/:userId/as-of",
+  protect,
+  authorize("Admin", "Payroll Officer"),
+  getSalaryStructureAsOfHandler,
 );
 router.get(
   "/salary-structure/:userId",
@@ -51,29 +86,23 @@ router.get(
   authorize("Admin", "Payroll Officer"),
   getEmployeeSalaryStructure,
 );
-router.get(
-  "/salary-statement",
-  protect,
-  authorize("Admin", "Payroll Officer"),
-  getSalaryStatement,
-);
-router.get(
-  "/payslips",
-  protect,
-  authorize("Admin", "Payroll Officer"),
-  getPayrollPayslips,
-);
 router.post(
-  "/payslips",
+  "/salary-structure/:userId",
   protect,
   authorize("Admin", "Payroll Officer"),
-  createPayrollPayslip,
+  assignSalaryStructureHandler,
 );
-router.get(
-  "/payslips/:id",
+router.put(
+  "/salary-structure/version/:structureId",
   protect,
   authorize("Admin", "Payroll Officer"),
-  getPayrollPayslipById,
+  updateSalaryStructureHandler,
+);
+router.delete(
+  "/salary-structure/version/:structureId",
+  protect,
+  authorize("Admin", "Payroll Officer"),
+  removeSalaryStructureHandler,
 );
 
 export default router;

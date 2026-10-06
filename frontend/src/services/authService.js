@@ -133,22 +133,6 @@ export const leaveService = {
   }
 };
 
-export const payrollService = {
-  // Get my payroll
-  getMyPayroll: async (month, year) => {
-    const response = await api.get('/payroll/my-payroll', {
-      params: { month, year }
-    });
-    return response.data;
-  },
-
-  // Get payslip details
-  getPayslip: async (payrollId) => {
-    const response = await api.get(`/payroll/payslip/${payrollId}`);
-    return response.data;
-  }
-};
-
 export const dashboardService = {
   // Get admin dashboard stats
   getAdminStats: async () => {
