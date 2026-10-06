@@ -9,8 +9,11 @@
     "dev": "nodemon server.js",
     "init-db": "node src/database/init.js",
     "migrate:attendance": "node src/database/migrate-attendance.js",
+    "migrate:leave-cancellation": "node src/database/migrate-leave-cancellation.js",
     "seed:demo": "node src/database/seed-demo-users.js",
-    "test": "node --test test/attendance.test.js",
+    "test": "node --test test/attendance.test.js test/leave.test.js",
+    "test:leave:http": "node --test test/leave-http.test.js",
+    "test:leave:perf": "node --test test/leave-performance.test.js",
     "init-payroll": "node src/database/init_payroll.js",
     "test:email": "node src/config/test-email.js",
     "setup:email": "node scripts/setup-email.js"

@@ -1,241 +1,276 @@
 import pool from "../config/database.js";
 
-export class LeaveRequest {
-  // Create a new leave request
-  static async create(leaveData) {
-    const {
-      user_id,
-      start_date,
-      end_date,
-      leave_type,
-      days_requested,
-      reason,
-    } = leaveData;
+export const getLeaveTypes = async () => {
+  const [rows] = await pool.query(
+    `SELECT leave_type_id, leave_type_name, description,
+            default_days_per_year, is_paid, requires_approval
+     FROM leave_types
+     ORDER BY leave_type_id`,
+  );
+  return rows;
+};
 
-    const [result] = await pool.query(
-      `INSERT INTO leave_requests 
-       (user_id, start_date, end_date, leave_type, days_requested, reason, status) 
-       VALUES (?, ?, ?, ?, ?, ?, 'Pending')`,
-      [user_id, start_date, end_date, leave_type, days_requested, reason]
-    );
+export const getLeaveTypeById = async (leaveTypeId, connection = pool) => {
+  const [rows] = await connection.query(
+    `SELECT leave_type_id, leave_type_name, description,
+            default_days_per_year, is_paid, requires_approval
+     FROM leave_types
+     WHERE leave_type_id = ?`,
+    [leaveTypeId],
+  );
+  return rows[0] || null;
+};
 
-    return result.insertId;
-  }
+export const getBalanceByUser = async (userId, year) => {
+  const [rows] = await pool.query(
+    `SELECT lb.balance_id, lb.user_id, lb.leave_type_id, lb.year,
+            lt.leave_type_name, lt.description, lt.is_paid,
+            lt.requires_approval, lb.total_allocated,
+            lb.used_days, lb.remaining_days
+     FROM leave_balance lb
+     INNER JOIN leave_types lt ON lb.leave_type_id = lt.leave_type_id
+     WHERE lb.user_id = ? AND lb.year = ?
+     ORDER BY lb.leave_type_id`,
+    [userId, year],
+  );
+  return rows;
+};
 
-  // Get leave requests by user ID
-  static async findByUserId(userId) {
-    const [rows] = await pool.query(
-      `SELECT * FROM leave_requests_view 
-       WHERE user_id = ? 
-       ORDER BY created_at DESC`,
-      [userId]
-    );
-    return rows;
-  }
+export const getBalanceForUpdate = async (
+  connection,
+  userId,
+  leaveTypeId,
+  year,
+) => {
+  const [rows] = await connection.query(
+    `SELECT balance_id, user_id, leave_type_id, year,
+            total_allocated, used_days, remaining_days
+     FROM leave_balance
+     WHERE user_id = ? AND leave_type_id = ? AND year = ?
+     FOR UPDATE`,
+    [userId, leaveTypeId, year],
+  );
+  return rows[0] || null;
+};
 
-  // Get all leave requests (for admin/HR)
-  static async findAll(filters = {}) {
-    let query = "SELECT * FROM leave_requests_view WHERE 1=1";
-    const params = [];
+export const findOverlappingApplications = async (
+  connection,
+  userId,
+  startDate,
+  endDate,
+) => {
+  const [rows] = await connection.query(
+    `SELECT leave_id, leave_type_id, start_date, end_date, total_days, status
+     FROM leave_applications
+     WHERE user_id = ?
+       AND status IN ('Pending', 'Approved')
+       AND start_date <= ?
+       AND end_date >= ?
+     LIMIT 1`,
+    [userId, endDate, startDate],
+  );
+  return rows[0] || null;
+};
 
-    if (filters.status) {
-      query += " AND status = ?";
-      params.push(filters.status);
-    }
+export const createLeaveApplication = async (connection, application) => {
+  const [result] = await connection.query(
+    `INSERT INTO leave_applications
+      (user_id, leave_type_id, start_date, end_date, total_days, reason, status)
+     VALUES (?, ?, ?, ?, ?, ?, 'Pending')`,
+    [
+      application.userId,
+      application.leaveTypeId,
+      application.startDate,
+      application.endDate,
+      application.totalDays,
+      application.reason,
+    ],
+  );
+  return result.insertId;
+};
 
-    if (filters.leave_type) {
-      query += " AND leave_type = ?";
-      params.push(filters.leave_type);
-    }
+export const getApplicationsByUser = async (userId) => {
+  const [rows] = await pool.query(
+    `SELECT la.leave_id, la.user_id, la.leave_type_id,
+            lt.leave_type_name, lt.is_paid,
+            DATE_FORMAT(la.start_date, '%Y-%m-%d') AS start_date,
+            DATE_FORMAT(la.end_date, '%Y-%m-%d') AS end_date,
+            la.total_days, la.reason, la.status,
+            la.applied_date, la.approved_by, la.approved_date,
+            la.rejection_reason
+     FROM leave_applications la
+     INNER JOIN leave_types lt ON la.leave_type_id = lt.leave_type_id
+     WHERE la.user_id = ?
+     ORDER BY la.start_date DESC, la.leave_id DESC`,
+    [userId],
+  );
+  return rows;
+};
 
-    if (filters.search) {
-      query += " AND (employee_name LIKE ? OR employee_code LIKE ?)";
-      params.push(`%${filters.search}%`, `%${filters.search}%`);
-    }
+export const getApplicationForUpdate = async (connection, leaveId) => {
+  const [rows] = await connection.query(
+    `SELECT la.leave_id, la.user_id, la.leave_type_id,
+            la.start_date, la.end_date, la.total_days,
+            la.status, la.approved_by, la.approved_date,
+            lt.leave_type_name, lt.is_paid
+     FROM leave_applications la
+     INNER JOIN leave_types lt ON la.leave_type_id = lt.leave_type_id
+     WHERE la.leave_id = ?
+     FOR UPDATE`,
+    [leaveId],
+  );
+  return rows[0] || null;
+};
 
-    query += " ORDER BY created_at DESC";
+export const updateApplicationStatus = async (
+  connection,
+  leaveId,
+  status,
+  reviewerId,
+  rejectionReason,
+) => {
+  await connection.query(
+    `UPDATE leave_applications
+     SET status = ?, approved_by = ?, approved_date = CURRENT_TIMESTAMP,
+         rejection_reason = ?
+     WHERE leave_id = ?`,
+    [status, reviewerId, rejectionReason, leaveId],
+  );
+};
 
-    const [rows] = await pool.query(query, params);
-    return rows;
-  }
+export const cancelApplication = async (connection, leaveId) => {
+  await connection.query(
+    `UPDATE leave_applications
+     SET status = 'Cancelled'
+     WHERE leave_id = ?`,
+    [leaveId],
+  );
+};
 
-  // Get leave request by ID
-  static async findById(requestId) {
-    const [rows] = await pool.query(
-      "SELECT * FROM leave_requests_view WHERE id = ?",
-      [requestId]
-    );
-    return rows[0];
-  }
+export const createLeaveAudit = async (connection, audit) => {
+  await connection.query(
+    `INSERT INTO audit_logs
+      (user_id, action, table_name, record_id, old_value, new_value, ip_address, user_agent)
+     VALUES (?, ?, 'leave_applications', ?, ?, ?, ?, ?)`,
+    [
+      audit.actorId,
+      audit.action,
+      audit.recordId,
+      audit.oldValue ? JSON.stringify(audit.oldValue) : null,
+      audit.newValue ? JSON.stringify(audit.newValue) : null,
+      audit.ipAddress || null,
+      audit.userAgent || null,
+    ],
+  );
+};
 
-  // Update leave request status (approve/reject)
-  static async updateStatus(requestId, status, reviewedBy) {
-    const [result] = await pool.query(
-      `UPDATE leave_requests 
-       SET status = ?, reviewed_by = ?, reviewed_at = NOW() 
-       WHERE id = ?`,
-      [status, reviewedBy, requestId]
-    );
-    return result.affectedRows > 0;
-  }
+export const getOrganizationLeaveRequests = async ({
+  whereSql,
+  params,
+  limit,
+  offset,
+}) => {
+  const from = `
+    FROM leave_applications la
+    INNER JOIN leave_types lt ON la.leave_type_id = lt.leave_type_id
+    INNER JOIN users u ON la.user_id = u.user_id
+    LEFT JOIN employee_profiles ep ON la.user_id = ep.user_id
+  `;
+  const [countRows] = await pool.query(
+    `SELECT COUNT(*) AS total ${from} ${whereSql}`,
+    params,
+  );
+  const [rows] = await pool.query(
+    `SELECT
+       la.leave_id,
+       la.user_id AS employee_id,
+       ep.employee_code,
+       CONCAT(ep.first_name, ' ', COALESCE(ep.last_name, '')) AS employee_name,
+       ep.department,
+       la.leave_type_id,
+       lt.leave_type_name AS leave_type,
+       DATE_FORMAT(la.start_date, '%Y-%m-%d') AS start_date,
+       DATE_FORMAT(la.end_date, '%Y-%m-%d') AS end_date,
+       la.total_days,
+       la.reason,
+       la.status,
+       la.applied_date,
+       la.approved_by,
+       la.approved_date,
+       la.rejection_reason,
+       u.email
+     ${from}
+     ${whereSql}
+     ORDER BY la.start_date DESC, la.leave_id DESC
+     LIMIT ? OFFSET ?`,
+    [...params, limit, offset],
+  );
+  return { rows, total: Number(countRows[0]?.total || 0) };
+};
 
-  // Delete leave request
-  static async delete(requestId) {
-    const [result] = await pool.query(
-      "DELETE FROM leave_requests WHERE id = ?",
-      [requestId]
-    );
-    return result.affectedRows > 0;
-  }
-}
+export const getActiveLeaveApplications = async () => {
+  const [rows] = await pool.query(
+    `SELECT
+       la.leave_id, la.user_id AS employee_id, ep.employee_code,
+       CONCAT(ep.first_name, ' ', COALESCE(ep.last_name, '')) AS employee_name,
+       ep.department, lt.leave_type_name AS leave_type,
+       DATE_FORMAT(la.start_date, '%Y-%m-%d') AS start_date,
+       DATE_FORMAT(la.end_date, '%Y-%m-%d') AS end_date,
+       la.total_days, u.email
+     FROM leave_applications la
+     INNER JOIN leave_types lt ON la.leave_type_id = lt.leave_type_id
+     INNER JOIN users u ON la.user_id = u.user_id
+     LEFT JOIN employee_profiles ep ON la.user_id = ep.user_id
+     WHERE la.status = 'Approved'
+       AND la.start_date <= CURRENT_DATE
+       AND la.end_date >= CURRENT_DATE
+     ORDER BY ep.employee_code, la.leave_id`,
+  );
+  return rows;
+};
 
-export class LeaveBalance {
-  // Get leave balance for a user
-  static async findByUserId(userId) {
-    const [rows] = await pool.query(
-      `SELECT * FROM leave_balances 
-       WHERE user_id = ?`,
-      [userId]
-    );
+export const getLeaveNotificationRecipients = async (connection, leaveId) => {
+  const [rows] = await connection.query(
+    `SELECT
+       la.leave_id, la.status, la.start_date, la.end_date, la.total_days,
+       la.reason, la.rejection_reason,
+       employee.email AS employee_email,
+       CONCAT(ep.first_name, ' ', COALESCE(ep.last_name, '')) AS employee_name,
+       lt.leave_type_name,
+       GROUP_CONCAT(DISTINCT CASE WHEN r.role_name IN ('Admin', 'HR Officer') THEN u.email END) AS hr_emails
+     FROM leave_applications la
+     INNER JOIN leave_types lt ON la.leave_type_id = lt.leave_type_id
+     INNER JOIN users employee ON la.user_id = employee.user_id
+     LEFT JOIN employee_profiles ep ON la.user_id = ep.user_id
+     LEFT JOIN users u ON u.is_active = TRUE
+     LEFT JOIN roles r ON u.role_id = r.role_id
+     WHERE la.leave_id = ?
+     GROUP BY la.leave_id, employee.email, ep.first_name, ep.last_name, lt.leave_type_name`,
+    [leaveId],
+  );
+  return rows[0] || null;
+};
 
-    // If no balance exists for this user, create one
-    if (rows.length === 0) {
-      await pool.query(
-        `INSERT INTO leave_balances (user_id, paid_time_off, sick_time_off) 
-         VALUES (?, 24.00, 7.00)`,
-        [userId]
-      );
-      return {
-        user_id: userId,
-        paid_time_off: 24.0,
-        sick_time_off: 7.0,
-      };
-    }
-
-    return rows[0];
-  }
-
-  // Update leave balance after approval
-  static async deductBalance(userId, leaveType, days) {
-    const field =
-      leaveType === "Paid Time Off" ? "paid_time_off" : "sick_time_off";
-
-    const [result] = await pool.query(
-      `UPDATE leave_balances 
-       SET ${field} = ${field} - ? 
-       WHERE user_id = ?`,
-      [days, userId]
-    );
-
-    return result.affectedRows > 0;
-  }
-
-  // Restore leave balance after rejection (if previously approved)
-  static async restoreBalance(userId, leaveType, days) {
-    const field =
-      leaveType === "Paid Time Off" ? "paid_time_off" : "sick_time_off";
-
-    const [result] = await pool.query(
-      `UPDATE leave_balances 
-       SET ${field} = ${field} + ? 
-       WHERE user_id = ?`,
-      [days, userId]
-    );
-
-    return result.affectedRows > 0;
-  }
-
-  // Get all balances (for admin reporting)
-  static async findAll() {
-    const [rows] = await pool.query(
-      `SELECT lb.*, 
-              CONCAT(ep.first_name, ' ', COALESCE(ep.last_name, '')) as employee_name,
-              ep.employee_code
-       FROM leave_balances lb
-       LEFT JOIN employee_profiles ep ON lb.user_id = ep.user_id
-       ORDER BY ep.first_name`
-    );
-    return rows;
-  }
-
-  // Allocate additional leave days (with max threshold check)
-  static async allocateLeave(
-    userId,
-    leaveType,
-    days,
-    allocatedBy,
-    reason = null
-  ) {
-    const field =
-      leaveType === "Paid Time Off" ? "paid_time_off" : "sick_time_off";
-    const maxField =
-      leaveType === "Paid Time Off" ? "paid_time_off_max" : "sick_time_off_max";
-
-    // Get current balance and max threshold
-    const [balances] = await pool.query(
-      `SELECT ${field} as current_balance, ${maxField} as max_threshold 
-       FROM leave_balances WHERE user_id = ?`,
-      [userId]
-    );
-
-    if (balances.length === 0) {
-      throw new Error("User leave balance not found");
-    }
-
-    const { current_balance, max_threshold } = balances[0];
-    const newBalance = parseFloat(current_balance) + parseFloat(days);
-
-    // Check if new balance exceeds maximum threshold
-    if (newBalance > max_threshold) {
-      throw new Error(
-        `Cannot allocate ${days} days. Maximum threshold is ${max_threshold} days. Current balance: ${current_balance} days.`
-      );
-    }
-
-    // Update balance
-    const [result] = await pool.query(
-      `UPDATE leave_balances 
-       SET ${field} = ${field} + ? 
-       WHERE user_id = ?`,
-      [days, userId]
-    );
-
-    // Record allocation in history
-    await pool.query(
-      `INSERT INTO leave_allocations 
-       (user_id, leave_type, days_allocated, reason, allocated_by) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [userId, leaveType, days, reason, allocatedBy]
-    );
-
-    return result.affectedRows > 0;
-  }
-
-  // Get allocation history for a user
-  static async getAllocationHistory(userId) {
-    const [rows] = await pool.query(
-      `SELECT la.*, 
-              CONCAT(allocator.first_name, ' ', COALESCE(allocator.last_name, '')) as allocated_by_name
-       FROM leave_allocations la
-       LEFT JOIN employee_profiles allocator ON la.allocated_by = allocator.user_id
-       WHERE la.user_id = ?
-       ORDER BY la.created_at DESC`,
-      [userId]
-    );
-    return rows;
-  }
-
-  // Get all allocations (for admin)
-  static async getAllAllocations() {
-    const [rows] = await pool.query(
-      `SELECT la.*, 
-              CONCAT(emp.first_name, ' ', COALESCE(emp.last_name, '')) as employee_name,
-              CONCAT(allocator.first_name, ' ', COALESCE(allocator.last_name, '')) as allocated_by_name
-       FROM leave_allocations la
-       LEFT JOIN employee_profiles emp ON la.user_id = emp.user_id
-       LEFT JOIN employee_profiles allocator ON la.allocated_by = allocator.user_id
-       ORDER BY la.created_at DESC`
-    );
-    return rows;
-  }
-}
+export const getLeaveAuditLogs = async ({ whereSql, params, limit, offset }) => {
+  const from = `
+    FROM audit_logs al
+    LEFT JOIN users u ON al.user_id = u.user_id
+    LEFT JOIN employee_profiles ep ON al.user_id = ep.user_id
+  `;
+  const [countRows] = await pool.query(
+    `SELECT COUNT(*) AS total ${from} ${whereSql}`,
+    params,
+  );
+  const [rows] = await pool.query(
+    `SELECT al.log_id, al.action, al.table_name, al.record_id,
+            al.old_value, al.new_value, al.created_at,
+            al.user_id AS actor_id, u.email AS actor_email,
+            CONCAT(ep.first_name, ' ', COALESCE(ep.last_name, '')) AS actor_name
+     ${from}
+     ${whereSql}
+     ORDER BY al.created_at DESC, al.log_id DESC
+     LIMIT ? OFFSET ?`,
+    [...params, limit, offset],
+  );
+  return { rows, total: Number(countRows[0]?.total || 0) };
+};

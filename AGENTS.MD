@@ -25,6 +25,24 @@ Attendance Milestone 1A-1C is implemented and verified. Attendance includes:
 - Streamed CSV export.
 - Transaction-safe, audited manual corrections through the existing `audit_logs` table.
 
+Leave Milestones 2A-2D are implemented and frozen. Leave uses only:
+
+- `leave_types`
+- `leave_balance`
+- `leave_applications`
+- `users`
+- `employee_profiles`
+- `audit_logs`
+
+Leave includes database-backed types and balances, weekday-only applications,
+overlap detection, HR/Admin approval and rejection, paid balance deduction and
+restoration, pending/approved cancellation, unpaid-leave neutrality, audit
+events, HR/Admin organization queries, server-side filters/pagination, and
+non-blocking email notifications using the existing Nodemailer infrastructure.
+
+Legacy Leave structures such as `leave_requests`, `leave_balances`,
+`leave_allocations`, and `leave_requests_view` must not be recreated or used.
+
 ### Demo Accounts
 
 Run `cd backend; npm run seed:demo` to create or refresh:
@@ -41,8 +59,10 @@ These are local development credentials only and must not be used in production.
 ```text
 cd backend; npm run init-db
 cd backend; npm run migrate:attendance
+cd backend; npm run migrate:leave-cancellation
 cd backend; npm run seed:demo
 cd backend; npm test
+cd backend; $env:LEAVE_API_URL='http://localhost:5000/api'; npm run test:leave:http
 cd backend; npm run dev
 cd frontend; npm run dev
 cd frontend; npm run build
@@ -56,5 +76,6 @@ The backend test suite uses the configured MySQL database and creates temporary 
 - Keep attendance business logic in `backend/src/services/attendanceService.js`; controllers should remain thin.
 - Keep authoritative calculations on the backend; React displays API results.
 - Use parameterized SQL and existing RBAC middleware.
-- Do not work on Leave, Payroll, Notifications, Docker, CI/CD, or unrelated refactors unless explicitly requested.
+- Do not work on Payroll, Docker, CI/CD, or unrelated refactors unless explicitly requested.
+- Leave is frozen; only make Leave changes for verified defects or an explicitly requested follow-up.
 - Do not claim tests, API verification, or performance metrics without running them.

@@ -254,6 +254,43 @@ export const testEmailConnection = async () => {
   }
 };
 
+export const sendLeaveNotification = async ({
+  recipients,
+  employeeEmail,
+  employeeName,
+  action,
+  leaveType,
+  startDate,
+  endDate,
+  totalDays,
+  rejectionReason,
+}) => {
+  const to = Array.isArray(recipients) ? recipients.filter(Boolean) : [];
+  if (employeeEmail) to.push(employeeEmail);
+  if (to.length === 0 || !process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+    return { success: false, skipped: true };
+  }
+
+  try {
+    const transporter = createTransporter();
+    const subject = `WorkZen Leave ${action}`;
+    const reason = rejectionReason ? `<p><strong>Reason:</strong> ${rejectionReason}</p>` : "";
+    const info = await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: [...new Set(to)].join(","),
+      subject,
+      html: `<p>Leave status: <strong>${action}</strong></p>
+        <p>Employee: ${employeeName || employeeEmail || "Employee"}</p>
+        <p>Type: ${leaveType}</p>
+        <p>Dates: ${startDate} to ${endDate} (${totalDays} day(s))</p>${reason}`,
+    });
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error("Leave notification failed:", error.message);
+    return { success: false, error: error.message };
+  }
+};
+
 // Send password change confirmation email
 export const sendPasswordChangeEmail = async (email, userName) => {
   try {

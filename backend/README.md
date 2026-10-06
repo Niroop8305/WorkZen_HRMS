@@ -119,14 +119,58 @@ Attendance rules default to `Asia/Kolkata`, 09:00 expected start, 18:00
 expected end, 15-minute late grace, and a 240-minute half-day threshold.
 Override them with the `APP_TIMEZONE` and `ATTENDANCE_*` environment variables.
 
+Leave organization endpoints:
+
+- `GET /requests` - Admin/HR organization-wide requests with pagination, search, status, leave type, department, `employee_id`, and date filters
+- `GET /active-leaves` - Admin/HR currently approved leave records
+- `GET /audit` - Admin/HR Leave audit report with pagination and action filters
+- `PATCH /:id/status` - Admin/HR approval or rejection
+- `PATCH /:id/cancel` - Eligible employee/Admin/HR cancellation
+
+Leave notifications reuse the existing Nodemailer service and are sent after a
+successful committed mutation. Email delivery is skipped safely when SMTP
+credentials are not configured and never rolls back a Leave transaction.
+
+Current Leave performance baseline (20 live requests per read endpoint, 5 per
+mutation, measured against a local server):
+
+| Endpoint | p50 | p95 | p99 |
+|---|---:|---:|---:|
+| `GET /leave/types` | 3.0 ms | 4.7 ms | 4.8 ms |
+| `GET /leave/balance` | 2.7 ms | 3.6 ms | 5.0 ms |
+| `GET /leave/my-leaves` | 2.1 ms | 3.0 ms | 3.2 ms |
+| `GET /leave/requests` | 2.7 ms | 3.2 ms | 4.0 ms |
+| `GET /leave/requests?status=Pending` | 2.6 ms | 3.5 ms | 3.5 ms |
+| `GET /leave/active-leaves` | 2.0 ms | 2.7 ms | 3.9 ms |
+| `GET /leave/audit` | 2.4 ms | 3.3 ms | 3.7 ms |
+| `POST /leave/apply` | 14.6 ms | 19.1 ms | 19.1 ms |
+| `PATCH /leave/:id/status` | 23.5 ms | 25.0 ms | 25.0 ms |
+| `PATCH /leave/:id/cancel` | 13.8 ms | 14.0 ms | 14.0 ms |
+
+Reproduce with a backend running on the target port:
+
+```bash
+LEAVE_API_URL='http://localhost:5000/api' npm run test:leave:perf
+```
+
 ### Leave (`/api/leave`)
 
-- `POST /apply` - Apply for leave
-- `GET /my-leaves` - Get my leave applications
-- `GET /all` - Get all leaves (Admin/HR)
-- `PUT /:leaveId/status` - Approve/Reject leave (Admin/HR)
-- `GET /balance` - Get leave balance
-- `GET /types` - Get leave types
+- `GET /types` - Get database-backed leave types
+- `GET /balance` - Get the authenticated employee's current-year balances; Admin/HR may pass `?employee_id=<id>` to view another employee's balances
+- `POST /apply` - Submit a pending leave application
+- `GET /my-leaves` - Get the authenticated employee's leave history
+
+The Leave foundation uses only `leave_types`, `leave_balance`, and
+`leave_applications`. Legacy `leave_requests`, `leave_balances`,
+`leave_allocations`, and `leave_requests_view` are not used.
+
+Leave days are calculated inclusively while excluding Saturday and Sunday.
+Holidays and partial-day leave are not currently modeled. Applications must
+remain within one calendar year, and pending or approved periods cannot
+overlap for the same employee. Submitting an application does not deduct
+balance; approving paid leave deducts it inside a locked transaction, and
+cancelling an approved paid leave restores it. Unpaid leave never mutates the
+paid balance.
 
 ### Payroll (`/api/payroll`)
 

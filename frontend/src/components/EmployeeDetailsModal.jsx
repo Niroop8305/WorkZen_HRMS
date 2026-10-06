@@ -206,88 +206,36 @@ const EmployeeDetailsModal = ({ isOpen, onClose, employee }) => {
     };
   };
 
-  const normalizeLeaveSummary = (balance, requests = []) => {
-    if (!balance && (!requests || requests.length === 0)) {
+  const normalizeLeaveSummary = (balance = [], pendingCount = 0) => {
+    const rows = Array.isArray(balance) ? balance : [];
+    if (rows.length === 0 && !pendingCount) {
       return null;
     }
 
-    const paidRemaining = Number(
-      balance?.paid_time_off_balance ??
-        balance?.paid_time_off ??
-        balance?.paid_time_off_remaining ??
-        0,
-    );
-    const sickRemaining = Number(
-      balance?.sick_time_off_balance ??
-        balance?.sick_time_off ??
-        balance?.sick_time_off_remaining ??
-        0,
-    );
+    let totalAllocated = 0;
+    let usedLeaves = 0;
+    let remainingLeaves = 0;
 
-    const paidMax = Number(
-      balance?.paid_time_off_max ??
-        balance?.paid_time_off_total ??
-        balance?.paid_time_off_allocated ??
-        24,
-    );
-    const sickMax = Number(
-      balance?.sick_time_off_max ??
-        balance?.sick_time_off_total ??
-        balance?.sick_time_off_allocated ??
-        7,
-    );
-
-    const usedByType = {
-      paid: 0,
-      sick: 0,
-    };
-    let pendingRequests = 0;
-
-    requests.forEach((request) => {
-      const status = (request.status || "").toLowerCase();
-      const days = Number(request.days_requested ?? request.total_days ?? 0);
-      const type = (request.leave_type || "").toLowerCase();
-
-      if (status === "pending") {
-        pendingRequests += 1;
-      }
-
-      if (status === "approved") {
-        if (type.includes("paid")) {
-          usedByType.paid += days;
-        } else if (type.includes("sick")) {
-          usedByType.sick += days;
-        }
-      }
+    const breakdown = rows.map((row) => {
+      const allocated = Number(row.total_allocated ?? 0);
+      const used = Number(row.used_days ?? 0);
+      const remaining = Number(row.remaining_days ?? 0);
+      totalAllocated += allocated;
+      usedLeaves += used;
+      remainingLeaves += remaining;
+      return {
+        leave_type: row.leave_type_name || "Leave",
+        allocated,
+        used,
+        remaining,
+      };
     });
-
-    const paidAllocated = Math.max(paidRemaining + usedByType.paid, paidMax);
-    const sickAllocated = Math.max(sickRemaining + usedByType.sick, sickMax);
-
-    const breakdown = [
-      {
-        leave_type: "Paid Time Off",
-        allocated: paidAllocated,
-        used: usedByType.paid,
-        remaining: paidRemaining,
-      },
-      {
-        leave_type: "Sick Time Off",
-        allocated: sickAllocated,
-        used: usedByType.sick,
-        remaining: sickRemaining,
-      },
-    ];
-
-    const totalAllocated = paidAllocated + sickAllocated;
-    const remainingLeaves = paidRemaining + sickRemaining;
-    const usedLeaves = Math.max(totalAllocated - remainingLeaves, 0);
 
     return {
       total_allocated: totalAllocated,
       used_leaves: usedLeaves,
       remaining_leaves: remainingLeaves,
-      pending_requests: pendingRequests,
+      pending_requests: pendingCount,
       breakdown,
     };
   };
@@ -320,12 +268,16 @@ const EmployeeDetailsModal = ({ isOpen, onClose, employee }) => {
           params: { userId: employee.user_id },
         })
         .catch(() => ({ data: { data: [] } }));
-      const leaveBalancesPromise = api
-        .get("/leave/employees")
+      const leaveBalancePromise = api
+        .get("/leave/balance", {
+          params: { employee_id: employee.user_id },
+        })
         .catch(() => ({ data: { data: [] } }));
-      const leaveRequestsPromise = api
-        .get("/leave/requests")
-        .catch(() => ({ data: { data: [] } }));
+      const leavePendingPromise = api
+        .get("/leave/requests", {
+          params: { employee_id: employee.user_id, status: "Pending", limit: 1 },
+        })
+        .catch(() => ({ data: { pagination: { total: 0 } } }));
       const liveStatusPromise = api
         .get("/attendance/all-status")
         .catch(() => ({ data: { data: {} } }));
@@ -333,30 +285,25 @@ const EmployeeDetailsModal = ({ isOpen, onClose, employee }) => {
       const [
         userResponse,
         attendanceResponse,
-        leaveBalancesResponse,
-        leaveRequestsResponse,
+        leaveBalanceResponse,
+        leavePendingResponse,
         liveStatusResponse,
       ] = await Promise.all([
         userPromise,
         attendancePromise,
-        leaveBalancesPromise,
-        leaveRequestsPromise,
+        leaveBalancePromise,
+        leavePendingPromise,
         liveStatusPromise,
       ]);
 
       const attendanceLogs = attendanceResponse.data.data || [];
       const attendanceSummary = summarizeAttendance(attendanceLogs);
 
-      const balances = leaveBalancesResponse.data.data || [];
-      const userBalance = balances.find(
-        (balance) => balance.user_id === employee.user_id,
-      );
+      const balanceRows = leaveBalanceResponse.data.data || [];
+      const pendingCount =
+        leavePendingResponse.data.pagination?.total ?? 0;
 
-      const requests = (leaveRequestsResponse.data.data || []).filter(
-        (request) => request.user_id === employee.user_id,
-      );
-
-      const leaveSummary = normalizeLeaveSummary(userBalance, requests);
+      const leaveSummary = normalizeLeaveSummary(balanceRows, pendingCount);
 
       const statusMap = liveStatusResponse.data.data || {};
       const statusValue = statusMap[employee.user_id];

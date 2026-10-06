@@ -89,29 +89,46 @@ export const attendanceService = {
 };
 
 export const leaveService = {
-  // Apply for leave
   applyLeave: async (leaveData) => {
     const response = await api.post('/leave/apply', leaveData);
     return response.data;
   },
 
-  // Get my leaves
-  getMyLeaves: async (status) => {
-    const response = await api.get('/leave/my-leaves', {
-      params: { status }
-    });
+  getMyLeaves: async () => {
+    const response = await api.get('/leave/my-leaves');
     return response.data;
   },
 
-  // Get leave balance
   getLeaveBalance: async () => {
     const response = await api.get('/leave/balance');
     return response.data;
   },
 
-  // Get leave types
   getLeaveTypes: async () => {
     const response = await api.get('/leave/types');
+    return response.data;
+  },
+
+  getOrganizationRequests: async (params) => {
+    const response = await api.get('/leave/requests', { params });
+    return response.data;
+  },
+
+  updateStatus: async (leaveId, status, rejectionReason) => {
+    const response = await api.patch(`/leave/${leaveId}/status`, {
+      status,
+      ...(rejectionReason ? { rejection_reason: rejectionReason } : {}),
+    });
+    return response.data;
+  },
+
+  cancel: async (leaveId) => {
+    const response = await api.patch(`/leave/${leaveId}/cancel`);
+    return response.data;
+  },
+
+  getActiveLeaves: async () => {
+    const response = await api.get('/leave/active-leaves');
     return response.data;
   }
 };

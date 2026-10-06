@@ -51,6 +51,9 @@ const seedDemoUsers = async () => {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
+    const [leaveTypes] = await connection.query(
+      "SELECT leave_type_id, default_days_per_year FROM leave_types",
+    );
     for (const demoUser of demoUsers) {
       const [roles] = await connection.query(
         "SELECT role_id FROM roles WHERE role_name = ?",
@@ -93,6 +96,20 @@ const seedDemoUsers = async () => {
           demoUser.designation,
         ],
       );
+
+      for (const leaveType of leaveTypes) {
+        await connection.query(
+          `INSERT IGNORE INTO leave_balance
+            (user_id, leave_type_id, year, total_allocated, used_days, remaining_days)
+           VALUES (?, ?, YEAR(CURRENT_DATE), ?, 0, ?)`,
+          [
+            users[0].user_id,
+            leaveType.leave_type_id,
+            leaveType.default_days_per_year,
+            leaveType.default_days_per_year,
+          ],
+        );
+      }
     }
     await connection.commit();
     console.log("Demo users are ready:");

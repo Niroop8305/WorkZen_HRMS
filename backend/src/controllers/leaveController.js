@@ -1,427 +1,174 @@
-import { LeaveRequest, LeaveBalance } from "../models/leaveModel.js";
-import pool from "../config/database.js";
+import {
+  applyLeave,
+  getEmployeeBalance,
+  getMyLeaveApplications,
+  getActiveLeaves,
+  getLeaveAuditReport,
+  getOrganizationLeaveRequests,
+  listLeaveTypes,
+  cancelLeave,
+  updateLeaveStatus,
+} from "../services/leaveService.js";
 
-// @desc    Create a new leave request
-// @route   POST /api/leave/request
-// @access  Private
-export const createLeaveRequest = async (req, res) => {
+const handleError = (res, error, fallbackMessage) => {
+  const validationMessages = [
+    "must use",
+    "not a valid date",
+    "cannot be after",
+    "must be a positive integer",
+    "is required",
+    "Invalid leave type",
+    "overlaps",
+    "Insufficient leave balance",
+    "Leave balance is not initialized",
+    "must include at least one weekday",
+    "must be Approved or Rejected",
+    "rejection_reason is required",
+    "Leave application not found",
+    "Leave application is already",
+    "Leave balance cannot restore",
+    "You are not authorized to cancel",
+    "Pagination values must be positive integers",
+    "Invalid leave status",
+    "startDate cannot be after endDate",
+    "record_id must be a positive integer",
+  ];
+  const isValidationError = validationMessages.some((message) =>
+    error.message?.includes(message),
+  );
+  console.error(fallbackMessage, error);
+  res.status(isValidationError ? 400 : 500).json({
+    success: false,
+    message: isValidationError ? error.message : fallbackMessage,
+  });
+};
+
+export const getLeaveTypes = async (req, res) => {
   try {
-    const { start_date, end_date, leave_type, reason } = req.body;
-    const userId = req.user.userId;
-
-    // Validate input
-    if (!start_date || !end_date || !leave_type) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide start date, end date, and leave type",
-      });
-    }
-
-    // Calculate total days (business days)
-    const startDate = new Date(start_date);
-    const endDate = new Date(end_date);
-
-    if (startDate > endDate) {
-      return res.status(400).json({
-        success: false,
-        message: "Start date cannot be after end date",
-      });
-    }
-
-    // Calculate total days including weekends
-    const diffTime = Math.abs(endDate - startDate);
-    const totalDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-
-    // Check if user has sufficient balance
-    const balance = await LeaveBalance.findByUserId(userId);
-    const availableDays =
-      leave_type === "Paid Time Off"
-        ? balance.paid_time_off
-        : balance.sick_time_off;
-
-    if (totalDays > availableDays) {
-      return res.status(400).json({
-        success: false,
-        message: `Insufficient ${leave_type} balance. Available: ${availableDays} days, Requested: ${totalDays} days`,
-      });
-    }
-
-    // Create leave request
-    const requestId = await LeaveRequest.create({
-      user_id: userId,
-      start_date,
-      end_date,
-      leave_type,
-      days_requested: totalDays,
-      reason: reason || null,
-    });
-
-    res.status(201).json({
-      success: true,
-      message: "Leave request submitted successfully",
-      data: { request_id: requestId },
-    });
+    res.status(200).json({ success: true, data: await listLeaveTypes() });
   } catch (error) {
-    console.error("Create Leave Request Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while creating leave request",
-      error: error.message,
-    });
+    handleError(res, error, "Unable to fetch leave types");
   }
 };
 
-// @desc    Get leave requests (my requests for employee, all for admin/HR)
-// @route   GET /api/leave/requests
-// @access  Private
-export const getLeaveRequests = async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    const userRole = req.user.roleName;
-    const { search, status, leave_type } = req.query;
-
-    let requests;
-
-    // Admin and HR Officer can see all requests
-    if (userRole === "Admin" || userRole === "HR Officer") {
-      requests = await LeaveRequest.findAll({ search, status, leave_type });
-    } else {
-      // Employees can only see their own requests
-      requests = await LeaveRequest.findByUserId(userId);
-    }
-
-    console.log("Leave Requests Data:", JSON.stringify(requests, null, 2));
-
-    res.status(200).json({
-      success: true,
-      data: requests,
-    });
-  } catch (error) {
-    console.error("Get Leave Requests Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while fetching leave requests",
-      error: error.message,
-    });
-  }
-};
-
-// @desc    Get leave balance
-// @route   GET /api/leave/balance
-// @access  Private
 export const getLeaveBalance = async (req, res) => {
   try {
-    const userId = req.user.userId;
-    const balance = await LeaveBalance.findByUserId(userId);
-
+    const requestedId = req.query.employee_id;
+    let targetUserId = req.user.userId;
+    if (requestedId !== undefined && requestedId !== "") {
+      const employeeId = Number(requestedId);
+      if (!Number.isInteger(employeeId) || employeeId < 1) {
+        return res.status(400).json({
+          success: false,
+          message: "employee_id must be a positive integer",
+        });
+      }
+      if (!["Admin", "HR Officer"].includes(req.user.roleName)) {
+        return res.status(403).json({
+          success: false,
+          message:
+            "You are not authorized to view another employee's leave balance",
+        });
+      }
+      targetUserId = employeeId;
+    }
     res.status(200).json({
       success: true,
-      data: balance,
+      data: await getEmployeeBalance(targetUserId),
     });
   } catch (error) {
-    console.error("Get Leave Balance Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while fetching leave balance",
-      error: error.message,
-    });
+    handleError(res, error, "Unable to fetch leave balance");
   }
 };
 
-// @desc    Approve or reject leave request
-// @route   PUT /api/leave/request/:id/status
-// @access  Private (Admin/HR Officer only)
-export const updateLeaveRequestStatus = async (req, res) => {
+export const applyLeaveRequest = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { status } = req.body;
-    const reviewerId = req.user.userId;
-    const userRole = req.user.roleName;
-
-    console.log("Update Leave Request - User Role:", userRole);
-    console.log("Update Leave Request - Request Body:", req.body);
-    console.log("Update Leave Request - Request ID:", id);
-
-    // Check if user has permission
-    if (userRole !== "Admin" && userRole !== "HR Officer") {
-      return res.status(403).json({
-        success: false,
-        message: "You do not have permission to approve/reject leave requests",
-      });
-    }
-
-    // Validate status
-    if (!["Approved", "Rejected"].includes(status)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid status. Must be Approved or Rejected",
-      });
-    }
-
-    // Get the leave request
-    const request = await LeaveRequest.findById(id);
-    if (!request) {
-      return res.status(404).json({
-        success: false,
-        message: "Leave request not found",
-      });
-    }
-
-    // Check if already reviewed
-    if (request.status !== "Pending") {
-      return res.status(400).json({
-        success: false,
-        message: `This request has already been ${request.status.toLowerCase()}`,
-      });
-    }
-
-    // Update status
-    await LeaveRequest.updateStatus(id, status, reviewerId);
-
-    // If approved, deduct from balance
-    if (status === "Approved") {
-      await LeaveBalance.deductBalance(
-        request.user_id,
-        request.leave_type,
-        request.days_requested
-      );
-    }
-
-    res.status(200).json({
-      success: true,
-      message: `Leave request ${status.toLowerCase()} successfully`,
-      data: { request_id: id, status },
+    const data = await applyLeave({
+      userId: req.user.userId,
+      leaveTypeId: req.body.leave_type_id,
+      startDate: req.body.start_date,
+      endDate: req.body.end_date,
+      reason: req.body.reason,
+      ipAddress: req.ip,
+      userAgent: req.get("user-agent"),
     });
+    res.status(201).json({ success: true, data });
   } catch (error) {
-    console.error("Update Leave Request Status Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while updating leave request status",
-      error: error.message,
-    });
+    handleError(res, error, "Unable to apply for leave");
   }
 };
 
-// @desc    Delete leave request (only if pending)
-// @route   DELETE /api/leave/request/:id
-// @access  Private
-export const deleteLeaveRequest = async (req, res) => {
+export const getMyLeaves = async (req, res) => {
   try {
-    const { id } = req.params;
-    const userId = req.user.userId;
-    const userRole = req.user.roleName;
-
-    // Get the leave request
-    const request = await LeaveRequest.findById(id);
-    if (!request) {
-      return res.status(404).json({
-        success: false,
-        message: "Leave request not found",
-      });
-    }
-
-    // Check permissions: user can delete their own pending requests, admin can delete any
-    if (request.user_id !== userId && userRole !== "Admin") {
-      return res.status(403).json({
-        success: false,
-        message: "You do not have permission to delete this request",
-      });
-    }
-
-    // Only allow deletion of pending requests
-    if (request.status !== "Pending") {
-      return res.status(400).json({
-        success: false,
-        message: "Only pending requests can be deleted",
-      });
-    }
-
-    await LeaveRequest.delete(id);
-
     res.status(200).json({
       success: true,
-      message: "Leave request deleted successfully",
+      data: await getMyLeaveApplications(req.user.userId),
     });
   } catch (error) {
-    console.error("Delete Leave Request Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while deleting leave request",
-      error: error.message,
-    });
+    handleError(res, error, "Unable to fetch leave history");
   }
 };
 
-// @desc    Allocate leave days to an employee
-// @route   POST /api/leave/allocate
-// @access  Private (Admin/HR only)
-export const allocateLeave = async (req, res) => {
+export const getOrganizationLeaves = async (req, res) => {
   try {
-    const { user_id, leave_type, days_allocated, reason } = req.body;
-    const allocatedBy = req.user.userId;
-
-    // Check if user is admin or HR
-    if (req.user.roleName !== "Admin" && req.user.roleName !== "HR Officer") {
-      return res.status(403).json({
-        success: false,
-        message: "Only Admin or HR Officer can allocate leave",
-      });
-    }
-
-    // Validate input
-    if (!user_id || !leave_type || !days_allocated) {
-      return res.status(400).json({
-        success: false,
-        message: "Please provide user_id, leave_type, and days_allocated",
-      });
-    }
-
-    if (days_allocated <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Days allocated must be greater than 0",
-      });
-    }
-
-    // Allocate leave with threshold check
-    await LeaveBalance.allocateLeave(
-      user_id,
-      leave_type,
-      days_allocated,
-      allocatedBy,
-      reason
-    );
-
-    res.status(201).json({
+    const result = await getOrganizationLeaveRequests(req.query);
+    res.status(200).json({
       success: true,
-      message: `Successfully allocated ${days_allocated} days of ${leave_type}`,
+      data: result.rows,
+      pagination: result.pagination,
     });
   } catch (error) {
-    console.error("Allocate Leave Error:", error);
-    res.status(400).json({
-      success: false,
-      message: error.message || "Server error while allocating leave",
-    });
+    handleError(res, error, "Unable to fetch organization leave requests");
   }
 };
 
-// @desc    Get all employees with their leave balances
-// @route   GET /api/leave/employees
-// @access  Private (Admin/HR only)
-export const getEmployeesWithBalances = async (req, res) => {
+export const getActiveLeaveRecords = async (req, res) => {
   try {
-    // Check if user is admin or HR
-    if (req.user.roleName !== "Admin" && req.user.roleName !== "HR Officer") {
-      return res.status(403).json({
-        success: false,
-        message: "Access denied",
-      });
-    }
-
-    const balances = await LeaveBalance.findAll();
-
-    res.status(200).json({
-      success: true,
-      data: balances,
-    });
+    res.status(200).json({ success: true, data: await getActiveLeaves() });
   } catch (error) {
-    console.error("Get Employees Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while fetching employees",
-      error: error.message,
-    });
+    handleError(res, error, "Unable to fetch active leave records");
   }
 };
 
-// @desc    Get allocation history
-// @route   GET /api/leave/allocations
-// @access  Private
-export const getAllocationHistory = async (req, res) => {
+export const getLeaveAudit = async (req, res) => {
   try {
-    const userId = req.user.userId;
-    const isAdminOrHR =
-      req.user.roleName === "Admin" || req.user.roleName === "HR Officer";
-
-    let allocations;
-    if (isAdminOrHR) {
-      // Admin/HR can see all allocations
-      allocations = await LeaveBalance.getAllAllocations();
-    } else {
-      // Regular users see only their own
-      allocations = await LeaveBalance.getAllocationHistory(userId);
-    }
-
-    res.status(200).json({
-      success: true,
-      data: allocations,
-    });
+    const result = await getLeaveAuditReport(req.query);
+    res.status(200).json({ success: true, data: result.rows, pagination: result.pagination });
   } catch (error) {
-    console.error("Get Allocation History Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while fetching allocation history",
-      error: error.message,
-    });
+    handleError(res, error, "Unable to fetch Leave audit records");
   }
 };
 
-// @desc    Get employees currently on leave
-// @route   GET /api/leave/active-leaves
-// @access  Private (Admin/HR)
-export const getActiveLeaves = async (req, res) => {
+export const updateLeaveApplicationStatus = async (req, res) => {
   try {
-    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD format
-
-    console.log("Fetching active leaves for date:", today);
-
-    const [rows] = await pool.query(
-      `SELECT 
-        lr.id,
-        lr.user_id,
-        lr.start_date,
-        lr.end_date,
-        lr.leave_type,
-        lr.days_requested,
-        CONCAT(COALESCE(ep.first_name, ''), ' ', COALESCE(ep.last_name, '')) as employee_name,
-        u.email
-       FROM leave_requests lr
-       LEFT JOIN users u ON lr.user_id = u.user_id
-       LEFT JOIN employee_profiles ep ON lr.user_id = ep.user_id
-       WHERE lr.status = 'Approved'
-       AND ? BETWEEN lr.start_date AND lr.end_date`,
-      [today]
-    );
-
-    console.log("Active leaves found:", rows.length);
-    console.log("Active leaves data:", rows);
-
-    // Create a map of user_id -> leave info for easy lookup
-    const activeLeaves = {};
-    rows.forEach((row) => {
-      activeLeaves[row.user_id] = {
-        id: row.id,
-        start_date: row.start_date,
-        end_date: row.end_date,
-        leave_type: row.leave_type,
-        days_requested: row.days_requested,
-        employee_name: row.employee_name,
-        email: row.email,
-      };
+    const data = await updateLeaveStatus({
+      leaveId: req.params.id,
+      reviewerId: req.user.userId,
+      status: req.body.status,
+      rejectionReason: req.body.rejection_reason,
+      ipAddress: req.ip,
+      userAgent: req.get("user-agent"),
     });
-
-    console.log("Active leaves map:", activeLeaves);
-
-    res.status(200).json({
-      success: true,
-      data: activeLeaves,
-    });
+    res.status(200).json({ success: true, data });
   } catch (error) {
-    console.error("Get Active Leaves Error:", error);
-    res.status(500).json({
-      success: false,
-      message: "Server error while fetching active leaves",
-      error: error.message,
+    handleError(res, error, "Unable to update leave application");
+  }
+};
+
+export const cancelLeaveApplication = async (req, res) => {
+  try {
+    const data = await cancelLeave({
+      leaveId: req.params.id,
+      requesterId: req.user.userId,
+      requesterRole: req.user.roleName,
+      ipAddress: req.ip,
+      userAgent: req.get("user-agent"),
     });
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    if (error.statusCode === 403) {
+      return res.status(403).json({ success: false, message: error.message });
+    }
+    handleError(res, error, "Unable to cancel leave application");
   }
 };

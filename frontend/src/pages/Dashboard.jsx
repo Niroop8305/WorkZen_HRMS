@@ -95,10 +95,12 @@ const Dashboard = () => {
   const fetchActiveLeaves = async () => {
     try {
       const response = await api.get("/leave/active-leaves");
-      console.log("Active leaves response:", response.data);
       if (response.data.success) {
-        console.log("Setting active leaves:", response.data.data);
-        setActiveLeaves(response.data.data);
+        const activeLeaveMap = (response.data.data || []).reduce(
+          (result, leave) => ({ ...result, [leave.employee_id]: leave }),
+          {},
+        );
+        setActiveLeaves(activeLeaveMap);
       }
     } catch (error) {
       console.error("Error fetching active leaves:", error);

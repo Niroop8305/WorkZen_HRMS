@@ -296,12 +296,15 @@ payroll ←→ payroll_details (One-to-Many)
 
 ### Leave
 
-- `POST /api/leave/apply` - Apply for leave
-- `GET /api/leave/my-leaves` - Get my leaves
-- `GET /api/leave/all` - Get all (Admin/HR)
-- `PUT /api/leave/:id/status` - Approve/Reject
-- `GET /api/leave/balance` - Get balance
-- `GET /api/leave/types` - Get leave types
+- `GET /api/leave/types` - Database-backed leave types
+- `GET /api/leave/balance` - My current-year balances (Admin/HR may pass `?employee_id=<id>`)
+- `POST /api/leave/apply` - Apply for leave (pending; does not deduct balance)
+- `GET /api/leave/my-leaves` - My leave history
+- `GET /api/leave/requests` - Organization-wide requests (Admin/HR) with search, status, leave-type, department, `employee_id`, and date filters plus pagination
+- `GET /api/leave/active-leaves` - Currently approved leave (Admin/HR)
+- `GET /api/leave/audit` - Leave audit report (Admin/HR)
+- `PATCH /api/leave/:id/status` - Approve/Reject (Admin/HR); approval deducts paid balance
+- `PATCH /api/leave/:id/cancel` - Cancel pending/approved leave; restores paid balance
 
 ### Payroll
 
