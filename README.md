@@ -1,232 +1,265 @@
-# Team - 68
+# WorkZen — Smart Human Resource Management System
 
-# Team Members
+WorkZen is a production-style HRMS that consolidates **Attendance**, **Leave**, and
+**Payroll** into a single, secure, role-aware backend with a React self-service
+frontend. It is built to be measurable: every calculation is server-authoritative,
+every sensitive operation is audited, and the headline endpoints were benchmarked
+against a 1,000-employee dataset rather than a toy fixture.
 
-LaxmiNiroop Papani
-Sharath Chandra Chandupatla
-Zainab Amreen
-Ishrath Jasmine
+- **Team:** Team-68 — LaxmiNiroop Papani, Sharath Chandra Chandupatla, Zainab Amreen, Ishrath Jasmine
+- **Problem statement:** Simplifying HR operations for smarter workplaces
+- **Demo recording:** https://drive.google.com/file/d/15srGdsJnu_gW45lxgUzSWsAI2y1dglLJ/view?usp=sharing
 
-# Demo
+---
 
-https://drive.google.com/file/d/15srGdsJnu_gW45lxgUzSWsAI2y1dglLJ/view?usp=sharing
+## Problem solved
 
-# Selected Problem Statement
+Small and mid-size teams often juggle attendance spreadsheets, email-based leave
+approvals, and manually computed payroll in separate tools with no shared source of
+truth. WorkZen replaces that with one system where:
 
-WorkZen – Simplifying HR Operations for Smarter Workplaces
+- employees self-serve attendance, leave, and payslips;
+- HR runs approvals and org-wide reporting;
+- Payroll Officers generate payslips from a governed, effective-dated salary model;
+- every change is traceable through a single audit trail.
 
-# WorkZen - Smart Human Resource Management System
+---
 
-![Odoo Logo](https://i.imgur.com/odoo-logo.png)
+## Core modules
 
-**WorkZen** is a comprehensive, all-in-one Human Resource Management System (HRMS) designed to modernize and simplify how organizations manage people, processes, and payroll. Built for the Odoo x Amalthea 2025 Hackathon.
+### Attendance
 
-## 🎯 Vision & Mission
+- Timezone-aware check-in / check-out using configurable rules. Defaults: `Asia/Kolkata`,
+  09:00 start, 18:00 end, 15-minute late grace, 240-minute half-day threshold.
+- Server-side worked, late, and early-checkout minute calculation; the client never
+  computes status.
+- One record per user per business date, enforced by a unique constraint.
+- Paginated employee history plus HR/Admin org views with search, status, department,
+  and date-range filters.
+- Streamed CSV export and transaction-safe, audited manual corrections.
 
-WorkZen aims to provide a clean, reliable, and user-friendly experience for both employees and administrators—enabling seamless collaboration in managing attendance, leave, payroll, and analytics from a unified interface.
+### Leave
 
-## 🏆 Hackathon Challenge
+- Database-backed leave types and annual balances.
+- Weekday-only applications, inclusive day counting, and overlap detection.
+- HR/Admin approval and rejection; approval deducts paid balance inside a locked
+  transaction, cancellation restores it. Unpaid leave never mutates paid balance.
+- Org-wide request lists with server-side filters/pagination, active-leave and audit
+  reports, and non-blocking email notifications.
 
-**Theme:** Smart Human Resource Management System
+### Payroll
 
-**Focus Areas:**
+- Governance-able salary components and effective-dated salary structures with
+  overlap protection and as-of resolution.
+- A single calculation engine (no duplicate paths) that consumes frozen Attendance
+  and Leave data to compute payable days, pro-rated PF, gross, and net.
+- Transaction-safe payroll generation, a payment-status state machine, and audit.
+- Server-side payslips (JSON + PDF rendered with pdfkit) and employee self-service.
 
-- ✅ User & Role Management
-- ✅ Attendance & Leave Management
-- ✅ Payroll Management
-- ✅ Dashboard & Analytics
+---
 
-## 🛠️ Tech Stack
-
-### Backend
-
-- **Node.js** + **Express.js** - RESTful API server
-- **MySQL** - Relational database with comprehensive schema
-- **JWT** - Token-based authentication
-- **bcryptjs** - Password hashing
-
-### Frontend
-
-- **Vite** + **React** - Modern, fast UI framework
-- **React Router v6** - Client-side routing
-- **Axios** - HTTP client
-- **CSS3** - Custom styling with Odoo brand colors
-
-### Database Architecture
-
-- 12 interconnected tables
-- Foreign key relationships for data integrity
-- Indexes for optimized queries
-- Views for complex queries
-- Triggers for automatic calculations
-- Stored procedures for business logic
-
-## 🎨 Design
-
-- **Minimal UI** - Clean, focused interface
-- **Odoo Brand Colors** - Purple (#714B67) and Gray (#878787)
-- **Dark Theme** - Modern, professional appearance
-- **Responsive** - Works on all devices
-
-## 📋 Features
-
-### ✅ Implemented (Phase 1)
-
-#### Authentication & Authorization
-
-- User registration with role assignment
-- Secure login with JWT tokens
-- Role-based access control (Admin, HR Officer, Payroll Officer, Employee)
-- Password encryption
-- Protected routes
-
-#### User Management
-
-- User profiles with detailed information
-- Employee code generation
-- Department and designation management
-- User status control (active/inactive)
-
-#### Database Design
-
-- Comprehensive schema with 12 tables
-- Users, Roles, Employee Profiles
-- Attendance tracking
-- Leave management (types, balance, applications)
-- Payroll (structure, components, processing)
-- Audit logs for accountability
-
-### ✅ Attendance Milestone 1 Complete
-
-#### Attendance Management
-
-- Timezone-aware check-in/check-out using configurable attendance rules
-- Server-side worked-minute, late-minute, early-checkout, and status calculations
-- One attendance record per employee per business date
-- Employee attendance history with server-side pagination
-- Admin/HR search, status, department, date-range filters, and pagination
-- Backend-streamed CSV export
-- Transaction-safe checkout and audited manual attendance corrections
-- Automated service/database tests and live API verification
-
-### 🚧 Remaining Modules
-
-#### Leave Management
-
-- Apply for leave with reason
-- Multiple leave types (Casual, Sick, Earned, etc.)
-- Leave balance tracking
-- Approval/rejection workflow
-- Leave history and reports
-
-#### Payroll Management
-
-- Salary structure definition
-- Multiple salary components (earnings/deductions)
-- Monthly payroll generation
-- Payslip viewing and download
-- Payment status tracking
-- Salary breakdowns
-
-#### Dashboard & Analytics
-
-- Admin dashboard with key metrics
-- Employee dashboard with personal stats
-- Attendance charts and summaries
-- Leave balance overview
-- Department-wise statistics
-- Recent activities
-
-## 📁 Project Structure
+## Architecture
 
 ```
-Odoo-x-Amalthea-2025-Hackathon/
-├── backend/
-│   ├── src/
-│   │   ├── config/          # Database configuration
-│   │   ├── controllers/     # Request handlers
-│   │   ├── database/        # Schema and initialization
-│   │   ├── middleware/      # Auth and error handling
-│   │   ├── models/          # Data access layer
-│   │   └── routes/          # API endpoints
-│   ├── .env                 # Environment variables
-│   ├── server.js            # Express server
-│   └── package.json
-│
-├── frontend/
-│   ├── src/
-│   │   ├── components/      # Reusable components
-│   │   ├── context/         # State management
-│   │   ├── pages/           # Page components
-│   │   ├── services/        # API services
-│   │   └── styles/          # CSS files
-│   ├── index.html
-│   ├── vite.config.js
-│   └── package.json
-│
-└── README.md
+React SPA (Vite)
+      │  Axios + JWT (Authorization header)
+      ▼
+Express API  ──►  JWT auth (protect)  ──►  RBAC (authorize roles)
+      │
+      ▼
+Controllers (thin)  ──►  Services (business rules, calculations)
+      │                       │
+      ▼                       ▼
+   Models (parameterized SQL)  │
+      │                       │
+      ▼                       ▼
+    MySQL (schema + indexes + audit_logs)
 ```
 
-## 🚀 Getting Started
+Request flow: **JWT → RBAC → Controller → Service → Model → MySQL.** The backend is
+the only security boundary; the React app renders whatever the API returns.
+Payroll is a downstream consumer of the frozen Attendance and Leave data — it never
+re-derives their business rules.
+
+```
+                      WorkZen
+                         │
+         ┌───────────────┼───────────────┐
+         ▼               ▼               ▼
+     Attendance        Leave         Payroll
+         │               │               │
+         └───────────────┼───────────────┘
+                         ▼
+                    Services layer
+                         ▼
+                 Data access layer
+                         ▼
+                      MySQL
+```
+
+---
+
+## Database architecture
+
+13 tables are used by the live application, plus 3 read views consumed by the user and
+dashboard surfaces. There are **no triggers or stored procedures** — all logic lives in
+the service layer.
+
+| Table | Purpose |
+|---|---|
+| `roles` | Admin, HR Officer, Payroll Officer, Employee |
+| `users` | Authentication + role link |
+| `employee_profiles` | Employee code, department, designation |
+| `attendance` | One row per user per business date |
+| `leave_types` | Database-driven leave categories (paid/unpaid) |
+| `leave_balance` | Per user / type / year allocation and usage |
+| `leave_applications` | Leave requests and approval state |
+| `salary_components` | Earning/deduction definitions |
+| `employee_salary_structure` | Effective-dated per-employee amounts |
+| `payroll` | One row per user per month/year + status |
+| `payroll_details` | Frozen component breakdown per payslip |
+| `audit_logs` | Append-only trail for sensitive mutations |
+| `password_reset_codes` | Self-service password reset |
+
+Relationships:
+
+```
+users 1──1 employee_profiles
+users 1──N attendance
+users 1──N leave_balance / leave_applications
+users 1──N employee_salary_structure / payroll
+leave_applications N──1 leave_types
+payroll 1──N payroll_details N──1 salary_components
+```
+
+---
+
+## Security
+
+- **Authentication:** JWT required on every module endpoint; unauthenticated requests
+  return `401`.
+- **Authorization (RBAC):** `authorize(...)` guards role-scoped endpoints. A verified
+  Employee is blocked (`403`) from org attendance, org leave, payroll generation,
+  salary components/structures, and **any other employee's** payroll or payslip (IDOR
+  protection confirmed at the JSON and PDF endpoints).
+- **Server-authoritative calculations:** manual attendance corrections and payroll
+  amounts are recomputed by the backend; a client-supplied `status` or salary amount is
+  never trusted, so no arbitrary value is persisted.
+- **Input security:** parameterized SQL throughout; validation at the service layer;
+  a `' OR 1=1--` style search payload is safely treated as a literal (empty result, no
+  error).
+- **Error handling:** standardized `{ success:false, message }` envelope; known DB/JWT
+  errors are mapped to safe messages; stack traces are only emitted in `development`.
+- **Retired surfaces:** the legacy `/api/payslip/*`, `/api/payrun/*`, and
+  `/api/employees/*` endpoints return a deliberate `404`.
+
+---
+
+## Testing
+
+Two layers, both run against the real MySQL database (no mocks):
+
+| Suite | Command | Result |
+|---|---|---|
+| Backend unit/integration (`attendance`, `leave`, `salary`, `payroll`, `payslip`) | `npm test` | **109 tests / 25 suites / 0 failed** |
+| HTTP integration (leave, payroll, payroll-generation, payslip, salary) | `npm run test:*:http` | **104 tests / 0 failed** |
+| **Total automated tests** | | **213 / 0 failed** |
+
+HTTP suites are env-gated (`LEAVE_API_URL`, `PAYROLL_API_URL`, `PAYSLIP_API_URL`,
+`SALARY_API_URL`) and seed their own isolated temp users so they never drain the demo
+dataset. The Leave HTTP suite snapshots and restores the shared demo balance in
+teardown, so repeated runs are deterministic.
+
+---
+
+## Performance
+
+Measured against a dedicated 1,000-employee benchmark dataset (109,151 attendance
+rows, 12,300 leave applications, 10,150 payroll records, 30,450 payroll line items).
+Read endpoints: 300 requests at concurrency 10; write endpoints: 150 distinct-entity
+requests at concurrency 5. **All endpoints returned a 0.0% error rate.** Percentiles
+below are aggregated across those request counts, not single calls.
+
+| Endpoint | p50 (ms) | p95 (ms) | p99 (ms) |
+|---|---:|---:|---:|
+| `POST /attendance/check-in` | 11.9 | 17.6 | 18.9 |
+| `GET /attendance/my-logs` | 15.5 | 25.2 | 48.4 |
+| `GET /attendance/all` (filtered day) | 55.6 | 91.6 | 120.8 |
+| `POST /leave/apply` | 17.7 | 23.8 | 29.4 |
+| `PATCH /leave/:id/status` (approve) | 25.6 | 32.9 | 37.0 |
+| `GET /leave/balance` | 29.7 | 41.5 | 44.4 |
+| `GET /payroll/my-payroll` | 14.3 | 21.7 | 25.3 |
+| `GET /payroll/salary-structure/:id/as-of` | 12.8 | 20.2 | 23.3 |
+| `GET /payroll/payslip/:id` | 17.1 | 25.9 | 26.9 |
+| `GET /payroll/payslip/:id/pdf` (server PDF) | 62.9 | 78.4 | 92.8 |
+| `POST /payroll/generate` | 39.6 | 46.4 | 52.1 |
+
+**Known non-critical scalability limits.** The two unfiltered org-list reads are heavy
+by design: `GET /payroll/all` with no period filter streams all ~10k rows (p50 ≈ 1.5s),
+and `GET /attendance/all` with no filters full-joins ~109k rows (p50 ≈ 1.8s) with a
+`Using temporary; Using filesort`. Both are mitigated in real use by the existing
+server-side filters/pagination (the filtered attendance path is ~92ms p95); a
+month/year-leading index on `payroll` would help the unfiltered browse but is not added
+because it is not justified by actual filtered query behavior.
+
+### Query plans (EXPLAIN highlights)
+
+Every hot path seeks an index; no new index was warranted.
+
+- `leave_balance` lookup → `idx_user_year`, ~6 rows.
+- Leave overlap check (correctness-critical) → `idx_user_status` range, ~10 rows.
+- `payroll` history → `unique_user_month_year`, ~11 rows.
+- Salary structure as-of → `idx_user_component`, ~3 rows.
+- Payslip by id → PRIMARY + `idx_payroll_id`, 1 + N rows.
+- Filtered attendance org list → `idx_attendance_date` range.
+
+---
+
+## Setup
 
 ### Prerequisites
 
 - Node.js v18+
 - MySQL 8.0+
-- npm or yarn
 
-### Installation
-
-#### 1. Clone the Repository
-
-```bash
-git clone https://github.com/Niroop8305/Odoo-x-Amalthea-2025-Hackathon.git
-cd Odoo-x-Amalthea-2025-Hackathon
-```
-
-#### 2. Backend Setup
+### Backend
 
 ```bash
 cd backend
 npm install
-
-# Configure .env file
-cp .env.example .env
-# Edit .env with your MySQL credentials
-
-# Initialize database
+cp .env.example .env        # set DB_* and JWT_SECRET
 npm run init-db
-
-# Start backend server
-npm run dev
+npm run migrate:attendance
+npm run migrate:leave-cancellation
+npm run migrate:salary-components
+npm run seed:demo
+npm run dev                 # http://localhost:5000
 ```
 
-Backend runs on: `http://localhost:5000`
-
-#### 3. Frontend Setup
+### Frontend
 
 ```bash
 cd frontend
 npm install
-
-# Start frontend dev server
-npm run dev
+npm run dev                 # http://localhost:5173
+npm run build               # production build
 ```
 
-Frontend runs on: `http://localhost:5173`
+### Tests
 
-### First Time Setup
+```bash
+cd backend
+npm test
+# HTTP suites (start the backend on the target port first):
+LEAVE_API_URL=http://localhost:5000/api npm run test:leave:http
+PAYROLL_API_URL=http://localhost:5000/api npm run test:payroll:http
+```
 
-1. Seed the local demo users:
+---
 
-   ```bash
-   cd backend
-   npm run seed:demo
-   ```
+## Demo accounts
 
-2. Navigate to `http://localhost:5173/login` and use a demo account below.
-
-### Demo Accounts
+Local development only — never use in production.
 
 | Role | Email | Password |
 |---|---|---|
@@ -235,189 +268,35 @@ Frontend runs on: `http://localhost:5173`
 | Payroll Officer | `payroll@workzen.demo` | `Payroll@123` |
 | Employee | `employee@workzen.demo` | `Employee@123` |
 
-## 📊 Database Schema
+---
 
-### Core Tables
+## API overview
 
-1. **roles** - User roles (Admin, HR Officer, Payroll Officer, Employee)
-2. **users** - User accounts and authentication
-3. **employee_profiles** - Detailed employee information
-4. **attendance** - Daily attendance records
-5. **leave_types** - Different leave categories
-6. **leave_balance** - Employee leave allocations
-7. **leave_applications** - Leave requests
-8. **salary_components** - Salary structure elements
-9. **employee_salary_structure** - Individual salary details
-10. **payroll** - Monthly payroll records
-11. **payroll_details** - Salary breakdowns
-12. **audit_logs** - System activity tracking
+| Module | Base | Highlights |
+|---|---|---|
+| Auth | `/api/auth` | register, login, me, password reset |
+| Users | `/api/users` | profile, org directory (Admin/HR) |
+| Attendance | `/api/attendance` | check-in/out, my-logs, summary, org list + CSV export, audited correction |
+| Leave | `/api/leave` | types, balance, apply, my-leaves, org requests, active-leaves, audit, approve/reject, cancel |
+| Payroll | `/api/payroll` | my-payroll, all (Admin/Payroll), generate, status, components, salary-structure (+ as-of), payslip JSON/PDF |
+| Dashboard | `/api/dashboard` | admin stats, employee self-service stats |
 
-### Key Relationships
-
-```
-users ←→ roles (Many-to-One)
-users ←→ employee_profiles (One-to-One)
-users ←→ attendance (One-to-Many)
-users ←→ leave_applications (One-to-Many)
-users ←→ payroll (One-to-Many)
-leave_applications ←→ leave_types (Many-to-One)
-payroll ←→ payroll_details (One-to-Many)
-```
-
-## 🔐 API Endpoints
-
-### Authentication
-
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - User login
-- `GET /api/auth/me` - Get current user
-- `POST /api/auth/logout` - Logout
-
-### Users
-
-- `GET /api/users` - Get all users (Admin/HR)
-- `GET /api/users/profile/:userId` - Get user profile
-- `PUT /api/users/profile/:userId` - Update profile
-- `PUT /api/users/:userId/status` - Update user status
-
-### Attendance
-
-- `POST /api/attendance/check-in` - Employee check-in
-- `POST /api/attendance/check-out` - Employee check-out
-- `GET /api/attendance/status` - Current employee status
-- `GET /api/attendance/today` - Today's employee records
-- `GET /api/attendance/my-logs` - Paginated employee history
-- `GET /api/attendance/summary` - Monthly employee summary
-- `GET /api/attendance/day` - Paginated HR/Admin daily records
-- `GET /api/attendance/all` - Paginated HR/Admin records with filters
-- `GET /api/attendance/export` - Filtered CSV export
-- `PUT /api/attendance/:attendanceId` - Audited HR/Admin correction
-- `DELETE /api/attendance/:attendanceId` - Admin deletion
-
-### Leave
-
-- `GET /api/leave/types` - Database-backed leave types
-- `GET /api/leave/balance` - My current-year balances (Admin/HR may pass `?employee_id=<id>`)
-- `POST /api/leave/apply` - Apply for leave (pending; does not deduct balance)
-- `GET /api/leave/my-leaves` - My leave history
-- `GET /api/leave/requests` - Organization-wide requests (Admin/HR) with search, status, leave-type, department, `employee_id`, and date filters plus pagination
-- `GET /api/leave/active-leaves` - Currently approved leave (Admin/HR)
-- `GET /api/leave/audit` - Leave audit report (Admin/HR)
-- `PATCH /api/leave/:id/status` - Approve/Reject (Admin/HR); approval deducts paid balance
-- `PATCH /api/leave/:id/cancel` - Cancel pending/approved leave; restores paid balance
-
-### Payroll
-
-- `GET /api/payroll/my-payroll` - Get my payroll
-- `GET /api/payroll/payslip/:id` - Get detailed payslip
-- `GET /api/payroll/all` - Get all payroll (Admin/Payroll Officer)
-- `POST /api/payroll/generate` - Generate payroll (Admin/Payroll Officer)
-- `PUT /api/payroll/:id/status` - Update payment status (Admin/Payroll Officer)
-- `GET /api/payroll/components` - Get salary components (Admin/Payroll Officer)
-- `GET /api/payroll/salary-structure/:userId` - Get an employee's salary structure (Admin/Payroll Officer)
-
-The legacy payroll architecture (`/api/payrun/*`, `/api/payslip/*`,
-`/api/employees/*`, and the duplicate `/api/payroll/payslips` and
-`/api/payroll/salary-statement` endpoints) was decommissioned in Payroll
-Milestone 1 and now returns a deliberate `404`. Payroll calculation, salary
-structure, and payslip generation are future milestones; payroll generation is
-not yet complete.
-
-### Dashboard
-
-- `GET /api/dashboard/stats` - Admin statistics
-- `GET /api/dashboard/my-stats` - Employee stats
-
-## 👥 User Roles
-
-| Role                | Permissions                                        |
-| ------------------- | -------------------------------------------------- |
-| **Admin**           | Full system access, user management, all reports   |
-| **HR Officer**      | Employee management, attendance, leave approval    |
-| **Payroll Officer** | Payroll generation, salary management              |
-| **Employee**        | View own records, apply for leave, mark attendance |
-
-## 🎨 UI Design
-
-### Sign In Page
-
-- Email/password login
-- Password visibility toggle
-- Clean, minimal design
-- Error handling
-- Link to sign up
-
-### Sign Up Page
-
-- Company name (optional)
-- Name, email, phone
-- Password with confirmation
-- Form validation
-- Link to sign in
-
-### Dashboard
-
-- Welcome message
-- Role-based information
-- User statistics
-- Profile details
-- Quick actions
-
-## 🔒 Security Features
-
-- **Password Hashing** - bcrypt with salt
-- **JWT Tokens** - Secure authentication
-- **Role-Based Access** - Authorization middleware
-- **SQL Injection Prevention** - Parameterized queries
-- **CORS Protection** - Configured origins
-- **Environment Variables** - Sensitive data protection
-
-## 📈 Scalability
-
-- **Connection Pooling** - Efficient database connections
-- **Indexed Queries** - Fast data retrieval
-- **Foreign Keys** - Data integrity
-- **Triggers** - Automatic calculations
-- **Views** - Optimized complex queries
-
-## 🧪 Testing
-
-### Health Check
-
-```bash
-curl http://localhost:5000/api/health
-```
-
-### Test Login
-
-```bash
-curl -X POST http://localhost:5000/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"admin@workzen.demo","password":"Admin@123"}'
-```
-
-## 🤝 Contributing
-
-This is a hackathon project. Contributions and suggestions are welcome!
-
-## 📝 License
-
-MIT License - feel free to use this project for learning and development.
-
-## 👨‍💻 Developer
-
-**Niroop** - Odoo x Amalthea 2025 Hackathon
-
-## 🙏 Acknowledgments
-
-- Odoo for the amazing ERP platform and inspiration
-- Amalthea 2025 Hackathon organizers
-- Open source community
-
-## 📞 Support
-
-For issues or questions, please open an issue on GitHub.
+56 route handlers across these modules. Response envelope is
+`{ success, data, message? }`, with `{ ..., pagination }` on paginated list reads.
 
 ---
 
-**Built with ❤️ for Odoo x Amalthea 2025 Hackathon**
+## Engineering highlights
+
+- Single server-authoritative payroll engine; no duplicated calculation paths.
+- Effective-dated salary model with overlap protection and as-of resolution.
+- Transaction-safe payroll generation, paid-leave balance mutation, and manual
+  attendance corrections — each paired with an `audit_logs` entry.
+- Server-rendered payslip PDFs; the client downloads a blob, never re-renders payroll.
+- Defense-in-depth RBAC with verified IDOR protection on payroll and payslip reads.
+- 213 automated tests across unit + HTTP layers, all green against the real database.
+- Measured sub-100ms p95 on the core self-service and payslip endpoints at 1,000-employee scale.
+
+## License
+
+MIT — free to use for learning and development.

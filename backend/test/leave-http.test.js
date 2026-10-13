@@ -7,6 +7,13 @@ let employeeToken, hrToken, adminToken, payrollToken;
 let employeeId, hrId;
 let createdIds = [];
 let paidLeaveTypeId, unpaidLeaveTypeId;
+// Test-isolation only: this suite approves paid leave for the shared demo
+// employee and its teardown raw-deletes the leave_applications rows, which
+// bypasses the cancellation restore path and permanently drains
+// leave_balance.used_days across runs. Snapshot the employee's balance rows
+// before the suite and restore them exactly in teardown so repeated runs are
+// deterministic. Production Leave behavior is untouched.
+let balanceSnapshot = [];
 
 const call = async (path, options = {}) => {
   const response = await fetch(`${base}${path}`, options);
@@ -58,6 +65,13 @@ describe('Leave Management HTTP API', { skip: !base }, () => {
     const types = res.body.data;
     paidLeaveTypeId = types.find(t => t.is_paid === 1 || t.is_paid === true)?.leave_type_id;
     unpaidLeaveTypeId = types.find(t => t.is_paid === 0 || t.is_paid === false)?.leave_type_id;
+
+    // Snapshot the test employee's leave balances for deterministic teardown.
+    const [balanceRows] = await pool.query(
+      'SELECT balance_id, used_days, remaining_days FROM leave_balance WHERE user_id = ?',
+      [employeeId]
+    );
+    balanceSnapshot = balanceRows;
   });
 
   after(async () => {
@@ -65,6 +79,14 @@ describe('Leave Management HTTP API', { skip: !base }, () => {
       const placeholders = createdIds.map(() => '?').join(',');
       await pool.query(`DELETE FROM audit_logs WHERE record_id IN (${placeholders}) AND table_name = 'leave_applications'`, createdIds);
       await pool.query(`DELETE FROM leave_applications WHERE leave_id IN (${placeholders})`, createdIds);
+    }
+    // Restore the snapshotted balances so the shared demo employee is left
+    // exactly as it was found, regardless of which leaves were approved.
+    for (const row of balanceSnapshot) {
+      await pool.query(
+        'UPDATE leave_balance SET used_days = ?, remaining_days = ? WHERE balance_id = ?',
+        [row.used_days, row.remaining_days, row.balance_id]
+      );
     }
     await pool.end();
   });

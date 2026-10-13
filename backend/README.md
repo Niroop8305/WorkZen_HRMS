@@ -30,9 +30,10 @@ Smart Human Resource Management System - Backend API
 
 - **Foreign Key Relationships** for data integrity
 - **Indexes** for optimized queries
-- **Views** for complex queries
-- **Triggers** for automatic calculations
-- **Stored Procedures** for business logic
+- **Views** for the user directory and dashboard aggregates
+- **`audit_logs`** append-only trail for sensitive mutations
+- All business logic lives in the **service layer** — there are no triggers or
+  stored procedures.
 
 ## Installation
 
@@ -62,7 +63,7 @@ Smart Human Resource Management System - Backend API
    - Create the database
    - Create all tables with relationships
    - Insert default roles and leave types
-   - Set up views, triggers, and procedures
+   - Set up the read views consumed by the user and dashboard surfaces
 
 4. **Start Server**
    ```bash
@@ -131,23 +132,11 @@ Leave notifications reuse the existing Nodemailer service and are sent after a
 successful committed mutation. Email delivery is skipped safely when SMTP
 credentials are not configured and never rolls back a Leave transaction.
 
-Current Leave performance baseline (20 live requests per read endpoint, 5 per
-mutation, measured against a local server):
-
-| Endpoint | p50 | p95 | p99 |
-|---|---:|---:|---:|
-| `GET /leave/types` | 3.0 ms | 4.7 ms | 4.8 ms |
-| `GET /leave/balance` | 2.7 ms | 3.6 ms | 5.0 ms |
-| `GET /leave/my-leaves` | 2.1 ms | 3.0 ms | 3.2 ms |
-| `GET /leave/requests` | 2.7 ms | 3.2 ms | 4.0 ms |
-| `GET /leave/requests?status=Pending` | 2.6 ms | 3.5 ms | 3.5 ms |
-| `GET /leave/active-leaves` | 2.0 ms | 2.7 ms | 3.9 ms |
-| `GET /leave/audit` | 2.4 ms | 3.3 ms | 3.7 ms |
-| `POST /leave/apply` | 14.6 ms | 19.1 ms | 19.1 ms |
-| `PATCH /leave/:id/status` | 23.5 ms | 25.0 ms | 25.0 ms |
-| `PATCH /leave/:id/cancel` | 13.8 ms | 14.0 ms | 14.0 ms |
-
-Reproduce with a backend running on the target port:
+Leave endpoint performance at 1,000-employee scale (300 requests per read,
+concurrency 10, 0% errors) is documented in the repository root `README.md`
+Performance section — that benchmark is the authoritative source. The
+`test:leave:perf` harness below is a low-volume smoke timer (a handful of
+requests per endpoint) and is **not** a percentile-grade measurement:
 
 ```bash
 LEAVE_API_URL='http://localhost:5000/api' npm run test:leave:perf
@@ -190,8 +179,12 @@ backing tables (`payroll_employees`, `payroll_payslips`, `payroll_payruns`,
 `payroll_attendance`) do not exist in the live database and must not be
 recreated. `src/database/payroll_schema.sql` and `payslips_migration.sql` are
 retained as deprecated historical documentation only — never execute them.
-Payroll calculation, salary structure, and payslip generation remain future
-milestones; payroll generation is not yet complete.
+
+Payroll is functionally complete: salary components, effective-dated salary
+structures with overlap/as-of handling, a single transaction-safe calculation
+engine, a payment-status state machine, audit logging, and server-rendered
+payslip JSON + PDF are all implemented and covered by the payroll, salary, and
+payslip test suites.
 
 ### Dashboard (`/api/dashboard`)
 

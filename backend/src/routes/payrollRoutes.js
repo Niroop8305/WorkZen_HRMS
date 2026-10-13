@@ -3,6 +3,7 @@ import { protect, authorize } from "../middleware/auth.js";
 import {
   getMyPayroll,
   getPayslipDetails,
+  getPayslipPdf,
   getAllPayroll,
   generatePayroll,
   updatePayrollStatus,
@@ -24,6 +25,7 @@ const router = express.Router();
 // Employee routes
 router.get("/my-payroll", protect, getMyPayroll);
 router.get("/payslip/:payrollId", protect, getPayslipDetails);
+router.get("/payslip/:payrollId/pdf", protect, getPayslipPdf);
 
 // Admin/Payroll Officer routes
 router.get(

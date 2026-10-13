@@ -12,10 +12,12 @@
     "migrate:leave-cancellation": "node src/database/migrate-leave-cancellation.js",
     "migrate:salary-components": "node src/database/migrate-salary-components.js",
     "seed:demo": "node src/database/seed-demo-users.js",
-    "test": "node --test test/attendance.test.js test/leave.test.js test/salary.test.js",
+    "test": "node --test test/attendance.test.js test/leave.test.js test/salary.test.js test/payroll.test.js test/payslip.test.js",
     "test:leave:http": "node --test test/leave-http.test.js",
     "test:leave:perf": "node --test test/leave-performance.test.js",
     "test:payroll:http": "node --test test/payroll-http.test.js",
+    "test:payroll:generate:http": "node --test test/payroll-generation-http.test.js",
+    "test:payslip:http": "node --test test/payslip-http.test.js",
     "test:salary:http": "node --test test/salary-http.test.js",
     "test:email": "node src/config/test-email.js",
     "setup:email": "node scripts/setup-email.js"
@@ -34,17 +36,13 @@
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "express-validator": "^7.0.1",
-    "html2pdf.js": "^0.12.1",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "mysql2": "^3.6.5",
-    "nodemailer": "^7.0.10"
+    "nodemailer": "^7.0.10",
+    "pdfkit": "^0.20.2"
   },
   "devDependencies": {
-    "autoprefixer": "^10.4.21",
-    "nodemon": "^3.0.2",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^4.1.17"
+    "nodemon": "^3.0.2"
   }
 }
