@@ -81,6 +81,17 @@ export const setSalaryComponentStatusHandler = async (req, res) => {
 
 export const getEmployeeSalaryStructure = async (req, res) => {
   try {
+    // T-011: an Employee may only read their own structure; staff roles read
+    // any. Same self-check for the as-of read below.
+    if (
+      req.user.roleName === "Employee" &&
+      Number(req.params.userId) !== Number(req.user.userId)
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to view this salary structure",
+      });
+    }
     const data = await getEmployeeSalaryStructures(req.params.userId, {
       includeInactive: req.query.include_inactive,
     });
@@ -92,6 +103,15 @@ export const getEmployeeSalaryStructure = async (req, res) => {
 
 export const getSalaryStructureAsOfHandler = async (req, res) => {
   try {
+    if (
+      req.user.roleName === "Employee" &&
+      Number(req.params.userId) !== Number(req.user.userId)
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "You are not authorized to view this salary structure",
+      });
+    }
     const components = await getSalaryStructureAsOf(
       req.params.userId,
       req.query.date,

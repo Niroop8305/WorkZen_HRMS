@@ -1049,6 +1049,29 @@ body {
   align-content: start;
 }
 
+.employee-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 30px 24px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.employee-pagination button {
+  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: transparent;
+  cursor: pointer;
+}
+
+.employee-pagination button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .employee-card {
   background: var(--bg-elevated);
   border: 1px solid rgba(148, 163, 184, 0.14);
@@ -1508,4 +1531,84 @@ body {
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.6;
+}
+
+/* D-2: employee dashboard cards */
+.employee-dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  gap: 16px;
+}
+
+.employee-dashboard-title {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.employee-dashboard-subtitle {
+  color: #8a8a8a;
+  font-size: 14px;
+}
+
+.employee-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.employee-dashboard-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.employee-dashboard-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 10px;
+}
+
+.employee-dashboard-big {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.employee-dashboard-detail {
+  color: #777;
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+.employee-dashboard-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 14px;
+}
+
+.employee-dashboard-list li {
+  padding: 4px 0;
+}
+
+.employee-dashboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.employee-dashboard-table th,
+.employee-dashboard-table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+}
+
+.employee-dashboard-empty {
+  color: #8a8a8a;
+  font-size: 13px;
 }

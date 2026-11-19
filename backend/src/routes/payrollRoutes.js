@@ -79,13 +79,16 @@ router.patch(
 router.get(
   "/salary-structure/:userId/as-of",
   protect,
-  authorize("Admin", "Payroll Officer"),
+  // T-011 visibility: an Employee may read their OWN structure; staff roles
+  // may read any. The self-check lives in the controller, which knows the
+  // requester's id.
+  authorize("Admin", "HR Officer", "Payroll Officer", "Employee"),
   getSalaryStructureAsOfHandler,
 );
 router.get(
   "/salary-structure/:userId",
   protect,
-  authorize("Admin", "Payroll Officer"),
+  authorize("Admin", "HR Officer", "Payroll Officer", "Employee"),
   getEmployeeSalaryStructure,
 );
 router.post(

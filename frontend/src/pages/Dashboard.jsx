@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
@@ -11,6 +12,11 @@ const EMPLOYEES_PAGE_SIZE = 24;
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
+  // D-2: Employees have their own dashboard; landing here would fire
+  // org-wide requests they are not authorized for.
+  if (user?.role === "Employee") {
+    return <Navigate to="/employee/dashboard" replace />;
+  }
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState("employees");
   const [searchQuery, setSearchQuery] = useState("");
@@ -456,6 +462,7 @@ const Dashboard = () => {
           isOpen={showEmployeeDetails}
           onClose={handleCloseEmployeeDetails}
           employee={selectedEmployee}
+          onUserUpdated={fetchEmployees}
         />
       </main>
     </div>

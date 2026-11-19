@@ -11,6 +11,9 @@ const MyProfile = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("resume");
   const [profileData, setProfileData] = useState(null);
+  const [salaryComponents, setSalaryComponents] = useState(null);
+  const [myPayroll, setMyPayroll] = useState([]);
+  const [salaryLoading, setSalaryLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
   const [privateInfoEditMode, setPrivateInfoEditMode] = useState(false);
@@ -55,6 +58,35 @@ const MyProfile = () => {
     fetchProfileData();
   }, []);
 
+  // T-011: the salary tab shows the real effective-dated structure from the
+  // API (Employee self-read is authorized) plus real payslip history. There
+  // are no fabricated defaults: an unconfigured structure renders an empty
+  // state, and payroll history comes from /payroll/my-payroll.
+  const fetchSalaryTab = async () => {
+    if (!user?.userId) return;
+    setSalaryLoading(true);
+    const [structureResult, payrollResult] = await Promise.allSettled([
+      api.get(`/payroll/salary-structure/${user.userId}/as-of`),
+      api.get("/payroll/my-payroll"),
+    ]);
+    if (structureResult.status === "fulfilled" && structureResult.value.data.success) {
+      const components = structureResult.value.data.data ?? [];
+      setSalaryComponents(Array.isArray(components) ? components : []);
+    } else {
+      setSalaryComponents(null);
+    }
+    if (payrollResult.status === "fulfilled" && payrollResult.value.data.success) {
+      setMyPayroll(payrollResult.value.data.data ?? []);
+    }
+    setSalaryLoading(false);
+  };
+
+  useEffect(() => {
+    if (activeTab === "salary") {
+      fetchSalaryTab();
+    }
+  }, [activeTab, user?.userId]);
+
   const fetchProfileData = async () => {
     try {
       setLoading(true);
@@ -97,15 +129,10 @@ const MyProfile = () => {
       // Initialize form data with existing data or defaults
       // Backend returns snake_case, convert to camelCase for frontend
       setFormData({
-        about:
-          response.data.data.profile?.about ||
-          "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.",
-        whatILove:
-          response.data.data.profile?.what_i_love ||
-          "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.",
-        interests:
-          response.data.data.profile?.interests ||
-          "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book.",
+        // D-5: no fabricated bios - an unset field stays empty for the user to fill.
+        about: response.data.data.profile?.about || "",
+        whatILove: response.data.data.profile?.what_i_love || "",
+        interests: response.data.data.profile?.interests || "",
         skills: skills,
         certifications: certifications,
         companyName: response.data.data.profile?.company_name || "",
@@ -479,10 +506,9 @@ const MyProfile = () => {
                 {userName.charAt(0).toUpperCase()}
               </span>
               <button className="edit-avatar-btn">✏️</button>
-              <div className="avatar-badge">Content Narwhal</div>
             </div>
             <div className="profile-basic-info">
-              <h2 className="profile-name">My Name</h2>
+              <h2 className="profile-name">{userName}</h2>
               <div className="profile-field">
                 <label>Login ID</label>
                 <div className="field-value">{user?.email}</div>
@@ -994,207 +1020,83 @@ const MyProfile = () => {
 
           {activeTab === "salary" && (
             <div className="salary-info-content">
-              {/* Salary Overview */}
-              <div className="salary-overview">
-                <div className="salary-row">
-                  <label>Month Wage</label>
-                  <div className="salary-value-group">
-                    <input
-                      type="text"
-                      className="salary-input"
-                      value="50000"
-                      readOnly
-                    />
-                    <span className="salary-unit">/ Month</span>
-                  </div>
-                  <div className="working-days-section">
-                    <label>No of working days in a week:</label>
-                    <input
-                      type="text"
-                      className="salary-input-small"
-                      value=""
-                      readOnly
-                    />
-                  </div>
-                </div>
-                <div className="salary-row">
-                  <label>Yearly wage</label>
-                  <div className="salary-value-group">
-                    <input
-                      type="text"
-                      className="salary-input"
-                      value="600000"
-                      readOnly
-                    />
-                    <span className="salary-unit">/ Yearly</span>
-                  </div>
-                  <div className="working-days-section">
-                    <label>Break Time:</label>
-                    <input
-                      type="text"
-                      className="salary-input-small"
-                      value=""
-                      readOnly
-                    />
-                    <span className="salary-unit">/hrs</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Salary Components */}
-              <div className="salary-section">
-                <h3>Salary Components</h3>
-                <div className="salary-components-grid">
-                  {/* Basic Salary */}
-                  <div className="component-item">
-                    <div className="component-header">
-                      <strong>Basic Salary</strong>
-                      <div className="component-values">
-                        <span>25000.00 ₹ / month</span>
-                        <span>50.00 %</span>
-                      </div>
-                    </div>
-                    <p className="component-description">
-                      Define Basic Salary from company cost compute it based on
-                      monthly Wages
-                    </p>
-                  </div>
-
-                  {/* House Rent Allowance */}
-                  <div className="component-item">
-                    <div className="component-header">
-                      <strong>House Rent Allowance</strong>
-                      <div className="component-values">
-                        <span>12500.00 ₹ / month</span>
-                        <span>50.00 %</span>
-                      </div>
-                    </div>
-                    <p className="component-description">
-                      HRA provided to employees 50% of the basic salary
-                    </p>
-                  </div>
-
-                  {/* Standard Allowance */}
-                  <div className="component-item">
-                    <div className="component-header">
-                      <strong>Standard Allowance</strong>
-                      <div className="component-values">
-                        <span>4167.00 ₹ / month</span>
-                        <span>16.67 %</span>
-                      </div>
-                    </div>
-                    <p className="component-description">
-                      A standard allowance is a predetermined, fixed amount
-                      provided to employee as part of their salary
-                    </p>
-                  </div>
-
-                  {/* Performance Bonus */}
-                  <div className="component-item">
-                    <div className="component-header">
-                      <strong>Performance Bonus</strong>
-                      <div className="component-values">
-                        <span>2082.50 ₹ / month</span>
-                        <span>8.33 %</span>
-                      </div>
-                    </div>
-                    <p className="component-description">
-                      Variable amount paid during payroll. The value defined by
-                      the company and calculated as a % of the basic salary
-                    </p>
-                  </div>
-
-                  {/* Leave Travel Allowance */}
-                  <div className="component-item">
-                    <div className="component-header">
-                      <strong>Leave Travel Allowance</strong>
-                      <div className="component-values">
-                        <span>2082.50 ₹ / month</span>
-                        <span>8.33 %</span>
-                      </div>
-                    </div>
-                    <p className="component-description">
-                      LTA is paid by the company to employees to cover their
-                      travel expenses, and calculated as a % of the basic salary
-                    </p>
-                  </div>
-
-                  {/* Fixed Allowance */}
-                  <div className="component-item">
-                    <div className="component-header">
-                      <strong>Fixed Allowance</strong>
-                      <div className="component-values">
-                        <span>2918.00 ₹ / month</span>
-                        <span>11.67 %</span>
-                      </div>
-                    </div>
-                    <p className="component-description">
-                      Fixed allowance portion of wages is determined after
-                      calculating all salary components
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Provident Fund Section */}
-              <div className="salary-section">
-                <h3 className="section-title-with-badge">
-                  <span className="badge-magnificent">Magnificent Weasel</span>
-                  <span> ent Fund (PF) Contribution</span>
-                </h3>
-                <div className="pf-grid">
-                  <div className="pf-item">
-                    <label>Employee</label>
-                    <div className="pf-values">
-                      <span>50.00 %</span>
-                      <input
-                        type="text"
-                        className="pf-input"
-                        value="3000.00"
-                        readOnly
-                      />
-                      <span>₹ / month</span>
-                      <span>12.00 %</span>
-                    </div>
-                    <p className="pf-description">
-                      PF is calculated based on the basic salary
-                    </p>
-                  </div>
-                  <div className="pf-item">
-                    <label>Employer</label>
-                    <div className="pf-values">
-                      <span></span>
-                      <input
-                        type="text"
-                        className="pf-input"
-                        value="3000.00"
-                        readOnly
-                      />
-                      <span>₹ / month</span>
-                      <span>12.00 %</span>
-                    </div>
-                    <p className="pf-description">
-                      PF is calculated based on the basic salary
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tax Deductions */}
-              <div className="salary-section">
-                <h3>Tax Deductions</h3>
-                <div className="tax-item">
-                  <div className="tax-header">
-                    <strong>Professional Tax</strong>
-                    <div className="tax-values">
-                      <span>200.00 ₹ / month</span>
-                    </div>
-                  </div>
-                  <p className="tax-description">
-                    Professional Tax deducted from the Gross Salary
+              {salaryLoading ? (
+                <div className="spinner" style={{ width: "28px", height: "28px" }} />
+              ) : salaryComponents === null ? (
+                <div className="salary-section">
+                  <p className="profile-empty-state">
+                    No salary structure has been configured for you yet. Your
+                    Payroll Officer can assign one; payslip history below shows
+                    what has actually been paid.
                   </p>
                 </div>
-              </div>
+              ) : (
+                <>
+                  {/* Effective-dated structure from the API (T-011): fixed
+                      earnings first, then deductions, in stored order. */}
+                  <div className="salary-section">
+                    <h3>Current Salary Components</h3>
+                    {salaryComponents.length === 0 ? (
+                      <p className="profile-empty-state">
+                        This structure has no components configured yet.
+                      </p>
+                    ) : (
+                      <div className="salary-components-grid">
+                        {salaryComponents.map((component) => (
+                          <div className="component-item" key={component.structure_id ?? component.component_name}>
+                            <div className="component-header">
+                              <strong>{component.component_name}</strong>
+                              <div className="component-values">
+                                <span>
+                                  {Number(component.amount).toFixed(2)}{" "}
+                                  {component.calculation_type === "PERCENTAGE"
+                                    ? "%"
+                                    : "₹ / month"}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Real payslip history; nothing is invented. */}
+                  <div className="salary-section">
+                    <h3>My Payslip History</h3>
+                    {myPayroll.length === 0 ? (
+                      <p className="profile-empty-state">
+                        No payslips have been generated yet.
+                      </p>
+                    ) : (
+                      <table className="profile-table">
+                        <thead>
+                          <tr>
+                            <th>Period</th>
+                            <th>Gross</th>
+                            <th>Deductions</th>
+                            <th>Net Pay</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {myPayroll.map((row) => (
+                            <tr key={row.payroll_id}>
+                              <td>
+                                {String(row.month).padStart(2, "0")}/{row.year}
+                              </td>
+                              <td>{row.gross_pay ?? "-"}</td>
+                              <td>{row.total_deductions ?? "-"}</td>
+                              <td>{row.net_pay ?? "-"}</td>
+                              <td>{row.payment_status ?? "-"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
 

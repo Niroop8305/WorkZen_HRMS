@@ -24,7 +24,15 @@ router.post("/check-in", protect, checkIn);
 router.post("/check-out", protect, checkOut);
 router.get("/status", protect, getAttendanceStatus);
 router.get("/today", protect, getTodayAttendance);
-router.get("/all-status", protect, getAllEmployeesAttendanceStatus);
+
+// Org-wide presence map. Mirrors the employee-directory policy: staff roles
+// only. An Employee reads their own status from /status above.
+router.get(
+  "/all-status",
+  protect,
+  authorize("Admin", "HR Officer", "Payroll Officer"),
+  getAllEmployeesAttendanceStatus
+);
 
 // Employee routes
 router.post("/mark", protect, markAttendance);
@@ -41,10 +49,18 @@ router.get(
 router.get(
   "/export",
   protect,
-  authorize("Admin", "HR Officer"),
+  // D-9: the UI offers this view/export to the Payroll Officer, so the read
+  // follows. Read-only; attendance writes stay Admin/HR(-only).
+  authorize("Admin", "HR Officer", "Payroll Officer"),
   exportAttendance
 );
-router.get("/all", protect, authorize("Admin", "HR Officer"), getAllAttendance);
+router.get(
+  "/all",
+  protect,
+  // D-9: same read-only grant for the Payroll Officer.
+  authorize("Admin", "HR Officer", "Payroll Officer"),
+  getAllAttendance
+);
 router.get(
   "/payable-days",
   protect,

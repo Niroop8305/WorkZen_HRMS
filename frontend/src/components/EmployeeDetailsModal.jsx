@@ -1,12 +1,35 @@
 import React, { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import "../styles/EmployeeDetailsModal.css";
 
-const EmployeeDetailsModal = ({ isOpen, onClose, employee }) => {
+// GET /api/users/:id returns first_name/last_name, phone, emergency_contact_name
+// and role_name, while the list row this modal falls back to already carries
+// full_name. Normalize one display shape so no field silently renders as
+// "Not provided" because of a key the API never sends.
+const withDisplayFields = (row = {}) => ({
+  ...row,
+  full_name:
+    row.full_name ||
+    [row.first_name, row.last_name].filter(Boolean).join(" ") ||
+    row.email,
+  role: row.role || row.role_name,
+  phone_number: row.phone_number || row.phone,
+  emergency_contact:
+    row.emergency_contact ||
+    [row.emergency_contact_name, row.emergency_contact_phone]
+      .filter(Boolean)
+      .join(" · "),
+});
+
+const EmployeeDetailsModal = ({ isOpen, onClose, employee, onUserUpdated }) => {
+  const { user: authUser } = useAuth();
   const [detailedInfo, setDetailedInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("personal");
   const [liveStatus, setLiveStatus] = useState(null);
+  const [adminActionError, setAdminActionError] = useState(null);
+  const [adminActionBusy, setAdminActionBusy] = useState(false);
 
   const getInitials = (name, email) => {
     if (name) {
@@ -313,7 +336,7 @@ const EmployeeDetailsModal = ({ isOpen, onClose, employee }) => {
       }
 
       setDetailedInfo({
-        user: userResponse.data.data || employee,
+        user: withDisplayFields(userResponse.data.data || employee),
         attendance: attendanceSummary,
         attendanceLogs,
         leave: leaveSummary,
@@ -321,7 +344,7 @@ const EmployeeDetailsModal = ({ isOpen, onClose, employee }) => {
     } catch (error) {
       console.error("Error fetching detailed info:", error);
       setDetailedInfo({
-        user: employee,
+        user: withDisplayFields(employee),
         attendance: null,
         leave: null,
       });
@@ -350,6 +373,91 @@ const EmployeeDetailsModal = ({ isOpen, onClose, employee }) => {
     if (e.target.className === "employee-details-overlay") {
       onClose();
     }
+  };
+
+  // Admin-only account controls: safe deactivation/reactivation and delete.
+  // Deactivation revokes every session server-side (the route owns that), so a
+  // stale token cannot be replayed if the account is reactivated later.
+  const targetUser = detailedInfo?.user || employee;
+  const isActive = targetUser?.is_active !== 0 && targetUser?.is_active !== false;
+
+  const toggleAccountStatus = async () => {
+    if (!targetUser?.user_id) return;
+    const verb = isActive ? "deactivate" : "reactivate";
+    if (!window.confirm(`Are you sure you want to ${verb} ${targetUser.full_name || targetUser.email}?`)) {
+      return;
+    }
+    setAdminActionBusy(true);
+    setAdminActionError(null);
+    try {
+      await api.put(`/users/${targetUser.user_id}/status`, {
+        is_active: !isActive,
+      });
+      setDetailedInfo((prev) =>
+        prev
+          ? { ...prev, user: { ...prev.user, is_active: !isActive } }
+          : prev,
+      );
+      onUserUpdated?.();
+    } catch (error) {
+      setAdminActionError(
+        error.response?.data?.message ?? `Failed to ${verb} the account.`,
+      );
+    } finally {
+      setAdminActionBusy(false);
+    }
+  };
+
+  const deleteAccount = async () => {
+    if (!targetUser?.user_id) return;
+    if (
+      !window.confirm(
+        `Permanently delete ${targetUser.full_name || targetUser.email}? This cannot be undone.`,
+      )
+    ) {
+      return;
+    }
+    setAdminActionBusy(true);
+    setAdminActionError(null);
+    try {
+      await api.delete(`/users/${targetUser.user_id}`);
+      onUserUpdated?.();
+      onClose();
+    } catch (error) {
+      setAdminActionError(
+        error.response?.data?.message ?? "Failed to delete the account.",
+      );
+    } finally {
+      setAdminActionBusy(false);
+    }
+  };
+
+  const renderAdminFooter = () => {
+    if (authUser?.role !== "Admin" || !targetUser?.user_id) return null;
+    const isSelf = authUser?.userId === targetUser.user_id;
+    return (
+      <div className="modal-admin-footer">
+        {adminActionError && (
+          <span className="admin-action-error">{adminActionError}</span>
+        )}
+        <button
+          className="btn btn-secondary"
+          onClick={toggleAccountStatus}
+          disabled={adminActionBusy || isSelf}
+          title={isSelf ? "You cannot deactivate your own account" : ""}
+        >
+          {isActive ? "Deactivate account" : "Reactivate account"}
+        </button>
+        <button
+          className="btn btn-danger"
+          onClick={deleteAccount}
+          disabled={adminActionBusy || isSelf}
+          title={isSelf ? "You cannot delete your own account" : ""}
+        >
+          Delete account
+        </button>
+      </div>
+    );
   };
 
   const renderPersonalInfo = () => {
@@ -428,12 +536,6 @@ const EmployeeDetailsModal = ({ isOpen, onClose, employee }) => {
             <div className="detail-label">Emergency Contact</div>
             <div className="detail-value">
               {user.emergency_contact || "Not provided"}
-            </div>
-          </div>
-          <div className="detail-item">
-            <div className="detail-label">Blood Group</div>
-            <div className="detail-value">
-              {user.blood_group || "Not provided"}
             </div>
           </div>
           <div className="detail-item">
@@ -721,6 +823,7 @@ const EmployeeDetailsModal = ({ isOpen, onClose, employee }) => {
             </>
           )}
         </div>
+        {renderAdminFooter()}
       </div>
     </div>
   );

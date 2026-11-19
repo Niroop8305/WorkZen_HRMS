@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import api from "../services/api";
+import { toLocalDateKey } from "../utils/dates";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import "../styles/App.css";
@@ -19,8 +20,9 @@ function endOfMonth(date) {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0);
 }
 
+// D-6: business-timezone (Asia/Kolkata) date keys, never UTC-shifted.
 function formatDateISO(date) {
-  return date.toISOString().split("T")[0];
+  return toLocalDateKey(date);
 }
 
 function parseTimeToDate(dateStr, timeStr) {
@@ -115,7 +117,9 @@ const Attendance = () => {
     const load = async () => {
       try {
         // Active leave indicators are optional and must not block attendance data.
-        if (isPrivileged) {
+        // The endpoint is Admin/HR scope (D-9/D-2), so a Payroll Officer must not
+        // fire a guaranteed 403 at it.
+        if (isPrivileged && user?.role !== "Payroll Officer") {
           try {
             const leavesResp = await api.get("/leave/active-leaves");
             setActiveLeaves(leavesResp.data?.data || {});
@@ -399,14 +403,9 @@ const Attendance = () => {
                       ? r.userName || r.employee_name || "[Employee]"
                       : "You";
 
-                    // Check if employee is on leave
-                    const onLeave = isPrivileged && activeLeaves[r.user_id];
-                    console.log(`Attendance row - Employee ${r.user_id}:`, {
-                      isPrivileged,
-                      onLeave,
-                      activeLeaves,
-                      userId: r.user_id,
-                    });
+                    // Check if employee is on leave (indicator map is empty for
+                    // the Payroll Officer, who has no leave read access).
+                    const onLeave = Boolean(activeLeaves[r.user_id]);
 
                     return (
                       <tr key={r.attendance_id || r.id}>
@@ -423,12 +422,14 @@ const Attendance = () => {
                             ? `${parseFloat(workHours).toFixed(2)}`
                             : "00:00"}
                         </td>
-                          <td>{r.status || "-"}</td>
+                        {/* Column order must mirror the header: Work Hours,
+                            Extra hours, Status. */}
                         <td>
                           {extraHours > 0
                             ? `${parseFloat(extraHours).toFixed(2)}`
                             : "00:00"}
                         </td>
+                        <td>{r.status || "-"}</td>
                       </tr>
                     );
                   })}

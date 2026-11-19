@@ -1,5 +1,10 @@
 import api from './api';
 
+// T-041: bound the logout request so a stalled backend cannot block client
+// credential cleanup. Short on purpose: revocation is best-effort from the
+// client's perspective.
+const LOGOUT_TIMEOUT_MS = 5000;
+
 export const authService = {
   // Register new user
   register: async (userData) => {
@@ -20,8 +25,16 @@ export const authService = {
   },
 
   // Logout
+  // T-041: a stalled backend must never hold the client's credential cleanup
+  // hostage. The revoke attempt is bounded by a short timeout so a hung TCP
+  // connection resolves in seconds, not at the axios/browser default (~0 for
+  // axios, browser-managed for the OS stack); the caller treats any failure
+  // (timeout included) as a completed logout because local credentials are
+  // cleared in `finally` regardless.
   logout: async () => {
-    const response = await api.post('/auth/logout');
+    const response = await api.post('/auth/logout', undefined, {
+      timeout: LOGOUT_TIMEOUT_MS,
+    });
     return response.data;
   }
 };

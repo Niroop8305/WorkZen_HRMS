@@ -5,11 +5,13 @@ import api from "../services/api";
 import { attendanceService } from "../services/authService";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
+import { toLocalDateKey } from "../utils/dates";
 import "../styles/App.css";
 import "../styles/EmployeeAttendance.css";
 
+// D-6: business-timezone (Asia/Kolkata) date keys, never UTC-shifted.
 function formatDateISO(date) {
-  return date.toISOString().split("T")[0];
+  return toLocalDateKey(date);
 }
 
 function startOfMonth(date) {

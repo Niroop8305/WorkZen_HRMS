@@ -9,6 +9,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AttendanceRouter from "./components/AttendanceRouter";
 import SignIn from "./pages/SignIn";
 import Dashboard from "./pages/Dashboard";
+import EmployeeDashboard from "./pages/EmployeeDashboard";
 import MyProfile from "./pages/MyProfile";
 import Attendance from "./pages/Attendance";
 import EmployeeAttendance from "./pages/EmployeeAttendance";
@@ -40,8 +41,8 @@ function App() {
             <Route
               path="/employee/dashboard"
               element={
-                <ProtectedRoute>
-                  <Dashboard />
+                <ProtectedRoute allowedRoles={["Employee"]}>
+                  <EmployeeDashboard />
                 </ProtectedRoute>
               }
             />

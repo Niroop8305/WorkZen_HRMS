@@ -1368,3 +1368,30 @@ select.info-input option {
   border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: var(--radius-md);
 }
+
+/* T-011 / D-5: real-data salary tab and honest empty states */
+.profile-empty-state {
+  color: #8a8a8a;
+  font-size: 14px;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+}
+
+.profile-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.profile-table th,
+.profile-table td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.profile-table th {
+  font-weight: 600;
+  color: #555;
+}
