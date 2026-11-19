@@ -4,6 +4,54 @@ Nothing here is committed. All changes below are uncommitted working-tree work o
 (`87e3950 chore: finalize WorkZen V2`), alongside ~45 pre-existing modified and ~41 untracked
 files from the earlier security / login-throttle / production-readiness tracks.
 
+## [T-004 + T-008 + T-002] HTTP perimeter, credential-privacy, session expiry — 2026-11-19
+
+**Status:** done (all three P0s). Roadmap reference: tracker → T-004, T-008, T-002.
+
+### Added
+
+- **`backend/src/config/securityConfig.js`** — helmet configuration (SPA CSP with
+  `style-src 'unsafe-inline'`, `frame-ancestors 'none'`, HSTS off until TLS), `TRUST_PROXY`
+  validation that refuses the boot on an unsafe value, and the tiered `/api` limiter
+  (per 60s: 900 authed reads / 300 unauthenticated / 300 mutations; preflight and
+  `/api/health` never counted; standard `RateLimit-*` headers only).
+- **`backend/src/database/migrate-session-expiry.js`** + npm script `migrate:session-expiry` —
+  idempotent T-002 backfill: adds `user_sessions.expires_at` when missing, stamps legacy rows
+  `issued_at + 24h` (never a lifetime extension), revokes what the stamp expired, caps accounts
+  at the newest five live rows. Converges to a no-op; live-verified twice on `workzen_hrms_test`.
+- **`backend/test/security-headers.test.js`** (12 cases) and
+  **`backend/test/create-user-response-privacy.test.js`** (5 cases) — DB-free, wired into
+  `test` and `test:dbfree`; **`backend/test/session-expiry.test.js`** (9 cases, DB-free SQL-shape).
+
+### Changed
+
+- **`backend/server.js`** — mounts `trust proxy` (validated), helmet, and the limiter before the
+  body parsers; boot refuses an unsafe `TRUST_PROXY`.
+- **`backend/src/models/sessionModel.js`** — issuance stamps the absolute window inside the cap
+  transaction, revokes already-expired rows before counting, counts only unexpired rows toward
+  the ≤5 cap; validation filters only the absolute window in SQL (revoked rows stay visible so
+  `validateSession` keeps its exact 401/403 contracts).
+- **`backend/src/database/schema.sql` + `migrate-user-sessions.js`** — `expires_at DATETIME NULL`
+  + `idx_session_expiry` on fresh installs.
+- **`backend/src/controllers/userController.js`** — T-008: the create-user response carries
+  `credentials_emailed` / `email_delivery_status` and never a credential; the plaintext exists
+  only in the welcome email.
+- **`frontend/src/components/CreateUserModal.jsx`** — no password display; distinct emailed /
+  mail-disabled / email-failed confirmations.
+- **`backend/test/login-throttle-policy.test.js`** — the scripted `session cap` fake answers the
+  two new issuance statements (expiry stamp, expired-revoke) and the session_id-ordered keep set.
+- **`backend/test/leave-performance.test.js`** — the benchmark now spawns its own isolated
+  backend with the limiter windows raised, because a throughput measurement is exactly what the
+  production limiter must throttle.
+
+### Verification (exact totals)
+
+| Group | Files | Tests | Pass | Fail |
+|---|---|---|---|---|
+| `npm test` (unit, canonical) | 25 | 398 | 398 | 0 |
+| `npm run test:dbfree` | 14 | 202 | 202 | 0 |
+| HTTP suites (all 13, against the limiter + helmet-enabled server) | 13 | 252 | 252 | 0 |
+
 ## [T-007 + T-009] Approved scratch schema `workzen_hrms_test` — full verification run — 2026-11-19
 
 **Status:** done (both tasks). Roadmap reference: tracker → T-007, T-009.

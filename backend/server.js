@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import morgan from "morgan";
 import dotenv from "dotenv";
-import { connectDB } from "./src/config/database.js";
+import pool, { connectDB } from "./src/config/database.js";
 import authRoutes from "./src/routes/authRoutes.js";
 import userRoutes from "./src/routes/userRoutes.js";
 import attendanceRoutes from "./src/routes/attendanceRoutes.js";
@@ -11,12 +11,51 @@ import payrollRoutes from "./src/routes/payrollRoutes.js";
 import dashboardRoutes from "./src/routes/dashboardRoutes.js";
 import emailRoutes from "./src/routes/emailRoutes.js";
 import { errorHandler } from "./src/middleware/errorHandler.js";
+import { assertAuthConfig } from "./src/config/authConfig.js";
+import { assertBootConfig, bootWarnings } from "./src/config/bootConfig.js";
+import { emailConfigWarnings } from "./src/config/email.js";
+import {
+  securityHeaders,
+  createApiLimiter,
+  resolveTrustProxy,
+} from "./src/config/securityConfig.js";
 
 // Load environment variables
 dotenv.config();
 
+// Refuse to start with a configuration that could mint unsafe tokens
+// (missing/weak JWT_SECRET or a missing, malformed or non-finite JWT_EXPIRE).
+try {
+  assertAuthConfig();
+} catch (error) {
+  console.error(`❌ ${error.message}`);
+  process.exit(1);
+}
+
+// Refuse to start on a configuration that would only fail later in a more
+// confusing place: an unset database target, an unreadable port, a time zone
+// that makes every attendance request throw once traffic is already flowing,
+// or a TRUST_PROXY value that would let X-Forwarded-For be spoofed silently.
+try {
+  assertBootConfig();
+  resolveTrustProxy();
+} catch (error) {
+  console.error(`❌ ${error.message}`);
+  process.exit(1);
+}
+
+// Reported, not fatal: each of these has a legitimate development use, but an
+// operator has to be able to see the gap. Values are never echoed.
+for (const warning of [...bootWarnings(), ...emailConfigWarnings()]) {
+  console.warn(`⚠️  ${warning}`);
+}
+
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Behind a reverse proxy the client IP comes from X-Forwarded-For; trusting the
+// configured hop keeps express-rate-limit and req.ip honest. Default: no proxy.
+app.set("trust proxy", resolveTrustProxy());
 
 // Middleware
 app.use(
@@ -25,6 +64,8 @@ app.use(
     credentials: true,
   })
 );
+app.use(securityHeaders());
+app.use(createApiLimiter());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan("dev"));
@@ -62,8 +103,61 @@ app.use("*", (req, res) => {
 app.use(errorHandler);
 
 // Start Server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 WorkZen Backend Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV}`);
   console.log(`🔗 API Base URL: http://localhost:${PORT}/api`);
+});
+
+// A stop signal has to release both resources the process holds: the listening
+// socket and the mysql2 pool. Without this, nodemon and container restarts keep
+// the old pool sockets alive and the port stays bound.
+const SHUTDOWN_GRACE_MS = 10000;
+let shuttingDown = false;
+
+const shutdown = (signal) => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`\n${signal} received: closing the HTTP listener`);
+
+  server.close(async () => {
+    try {
+      await pool.end();
+      console.log("Database pool closed: shutdown complete");
+      process.exit(0);
+    } catch (error) {
+      console.error("Error closing the database pool:", error.message);
+      process.exit(1);
+    }
+  });
+
+  // Keep-alive connections never go idle on their own, so a client that holds
+  // the socket would otherwise stall the shutdown until the grace timer fires.
+  if (typeof server.closeIdleConnections === "function") {
+    server.closeIdleConnections();
+  }
+
+  setTimeout(() => {
+    console.error(`Shutdown exceeded ${SHUTDOWN_GRACE_MS}ms: forcing exit`);
+    process.exit(1);
+  }, SHUTDOWN_GRACE_MS).unref();
+};
+
+for (const signal of ["SIGINT", "SIGTERM"]) {
+  process.once(signal, () => shutdown(signal));
+}
+
+// Node already aborts on an escaped rejection or exception; these handlers keep
+// that fail-fast behaviour and make the reason legible in the log.
+process.on("unhandledRejection", (reason) => {
+  console.error(
+    "Unhandled promise rejection, exiting:",
+    reason instanceof Error ? reason.message : reason,
+  );
+  process.exit(1);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught exception, exiting:", error);
+  process.exit(1);
 });

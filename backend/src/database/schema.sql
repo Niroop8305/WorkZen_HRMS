@@ -310,10 +310,15 @@ CREATE TABLE IF NOT EXISTS user_sessions (
     user_id INT NOT NULL,
     issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     revoked_at TIMESTAMP NULL,
+    -- T-002 absolute session expiry: set at issuance to issued + TTL. NULL for
+    -- rows created before the column existed, until the backfill migration
+    -- stamps them; NULL is treated as "no absolute window" by validation.
+    expires_at DATETIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
     INDEX idx_user_id (user_id),
-    INDEX idx_revoked_at (revoked_at)
+    INDEX idx_revoked_at (revoked_at),
+    INDEX idx_session_expiry (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =====================================================

@@ -121,23 +121,39 @@ export const createUser = async (req, res) => {
     // Send welcome email with credentials
     const emailResult = await sendWelcomeEmail(userDetails);
 
-    if (!emailResult.success) {
-      console.error("Failed to send welcome email:", emailResult.error);
-      // Don't fail the user creation if email fails, just log it
+    // Three outcomes, deliberately not collapsed: mail that left for SMTP, mail the
+    // environment declined to send, and mail that failed. Only the first is "sent".
+    if (emailResult.delivered !== true) {
+      console.warn(
+        `Welcome email not delivered for ${email}; transport=${emailResult.transport}, reason=${emailResult.reason || emailResult.error || "delivery disabled"}`
+      );
     }
 
     res.status(201).json({
       success: true,
-      message: emailResult.success
-        ? "User created successfully and welcome email sent"
-        : "User created successfully but email failed to send",
-      emailSent: emailResult.success,
+      message:
+        emailResult.delivered === true
+          ? "User created successfully and welcome email sent"
+          : emailResult.success
+            ? "User created successfully; mail is disabled in this environment, so no welcome email was sent"
+            : "User created successfully but email failed to send",
+      // T-008: the temporary credential exists only inside the welcome email.
+      // The API reports how the credential was delivered; it never carries the
+      // credential itself in a response body, a log line or a modal.
+      emailSent: emailResult.delivered === true,
+      credentials_emailed: emailResult.delivered === true,
+      email_delivery_status:
+        emailResult.delivered === true
+          ? "emailed"
+          : emailResult.success
+            ? "mail-disabled"
+            : "failed",
+      mailTransport: emailResult.transport ?? null,
       data: {
         userId,
         email,
         role: role.role_name,
         employee_code,
-        temporary_password: randomPassword, // Still return for modal display
         full_name: `${first_name} ${last_name || ""}`.trim(),
       },
     });
@@ -146,18 +162,18 @@ export const createUser = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error during user creation",
-      error: error.message,
     });
   }
 };
 
-// @desc    Get all users (All authenticated users can view)
+// @desc    Get all users (organization-wide directory)
 // @route   GET /api/users
-// @access  Private
+// @access  Private (Admin, HR Officer, Payroll Officer)
 export const getAllUsers = async (req, res) => {
   try {
-    // All authenticated users can view employee list
-    // Only creating users is restricted to Admin
+    // The directory is staff-only; an Employee sees their own profile through
+    // GET /api/users/profile/:userId instead. Route authorization owns the role
+    // check, so every record returned here is already for a permitted audience.
     const users = await User.findAllWithProfiles();
 
     res.status(200).json({
@@ -170,7 +186,6 @@ export const getAllUsers = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error while fetching users",
-      error: error.message,
     });
   }
 };
@@ -208,7 +223,6 @@ export const getUserById = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error while fetching user",
-      error: error.message,
     });
   }
 };
@@ -255,7 +269,6 @@ export const deleteUser = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Server error while deleting user",
-      error: error.message,
     });
   }
 };

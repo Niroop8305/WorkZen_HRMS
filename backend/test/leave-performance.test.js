@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
+import { spawn } from 'node:child_process';
+import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import pool from '../src/config/database.js';
 import { requiredBaseUrl, guardExecutedTests } from './support/httpSuite.js';
 import { assertScratchDatabase } from './support/dbGuard.js';
@@ -10,7 +13,45 @@ import { assertScratchDatabase } from './support/dbGuard.js';
 // registers.
 assertScratchDatabase('leave-performance');
 
-const base = requiredBaseUrl('LEAVE_API_URL', 'test:leave:perf');
+// The benchmark measures throughput: hundreds of requests in seconds, which is
+// exactly what the global /api rate limiter (T-004) exists to stop in
+// production. A benchmark is not a flood, so this suite spawns its own isolated
+// backend with the limiter's windows raised far beyond any benchmark's need;
+// production perimeter controls are never part of a latency measurement.
+const backendDir = fileURLToPath(new URL('..', import.meta.url));
+const spawned = [];
+let base = null;
+
+const spawnBenchmarkServer = async () => {
+  const port = 5073 + Math.floor(Math.random() * 20);
+  const child = spawn(process.execPath, ['server.js'], {
+    cwd: backendDir,
+    env: {
+      ...process.env,
+      PORT: String(port),
+      EMAIL_DRY_RUN: 'true',
+      RATE_LIMIT_WINDOW_MS: '60000',
+      RATE_LIMIT_AUTHED_READS: '1000000',
+      RATE_LIMIT_UNAUTHED: '1000000',
+      RATE_LIMIT_MUTATIONS: '1000000',
+    },
+    stdio: ['ignore', 'ignore', 'pipe'],
+  });
+  let stderr = '';
+  child.stderr.on('data', (d) => { stderr += d; });
+  spawned.push(child);
+  const deadline = Date.now() + 25000;
+  for (;;) {
+    try {
+      const r = await fetch(`http://localhost:${port}/api/health`);
+      if (r.ok) return `http://localhost:${port}/api`;
+    } catch {}
+    if (Date.now() > deadline) {
+      throw new Error(`benchmark backend failed to start on port ${port}: ${stderr.slice(-400)}`);
+    }
+    await new Promise((r) => setTimeout(r, 400));
+  }
+};
 const ITERATIONS = 20; // Number of iterations per endpoint
 const MUTATION_ITERATIONS = 5;
 
@@ -55,6 +96,12 @@ const benchmark = async (label, fn, iterations = ITERATIONS) => {
 // verifies that backup/restore round-trip before touching anything shared.
 // Production Leave behavior is untouched.
 const SELF_CHECK_RECORD_ID = -1;
+
+after(async () => {
+    for (const child of spawned) {
+        try { child.kill(); } catch {}
+    }
+});
 
 const selectAuditRows = async (recordIds) => {
   if (recordIds.length === 0) return [];
@@ -191,6 +238,7 @@ describe('Leave Performance Benchmark', () => {
     const cancelDates = ['2026-11-16', '2026-11-17', '2026-11-18', '2026-11-19', '2026-11-20'];
 
     before(async () => {
+        base = await spawnBenchmarkServer();
         // Authenticate
         const authEmp = await call('/auth/login', {
             method: 'POST',

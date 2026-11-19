@@ -54,15 +54,31 @@ Legend — **P0** security/data-integrity · **P1** essential function & major w
   specified in **T-041**; every other failure class (401, 500, unreachable, missing token, repeat)
   was executed in a browser and clears credentials correctly with no unhandled rejection.
 
-- [ ] **T-002 · Bound and backfill unreverked sessions** · P0 · TODO · deps: T-001
-  Files: `backend/src/models/sessionModel.js:18-72`, `backend/src/database/prune-sessions.js`,
-  new one-time script
+- [x] **T-002 · Bound and backfill unreverked sessions** · P0 · DONE 2026-11-19 · deps: T-001
+  Files: `backend/src/models/sessionModel.js`, `backend/src/config/throttleConfig.js`
+  (`SESSION_ABSOLUTE_TTL_HOURS = 24`), `backend/src/database/schema.sql` (`user_sessions.expires_at
+  DATETIME NULL` + `idx_session_expiry`), `backend/src/database/migrate-user-sessions.js` (fresh
+  tables get the column), **new `backend/src/database/migrate-session-expiry.js`** + npm script
+  `migrate:session-expiry`, `backend/test/session-expiry.test.js` (new, 9 cases, DB-free).
   Do: (a) one-time backfill revoking sessions beyond the cap for existing users; (b) an absolute
-  per-session expiry column so JWT `exp` is not the only bound.
+  per-session expiry column so JWT `exp` is not the only bound. — **done:**
+  • Issuance stamps `expires_at = DATE_ADD(NOW(), INTERVAL 24 HOUR)` inside the cap transaction,
+  revokes already-expired rows for the account before counting, and counts only unexpired,
+  unrevoked rows toward the ≤5 cap (verified by SQL-shape pins).
+  • Validation filters only the absolute window in SQL (`expires_at IS NULL OR expires_at > NOW()`);
+  revoked rows stay visible so `validateSession` keeps its exact contracts (deactivation 403,
+  "expired or logged out" 401). An expired window fails closed as "Session is invalid".
+  • Migration (idempotent by construction, converges to a no-op): adds the column when missing,
+  backfills `expires_at = issued_at + TTL` (rows older than the TTL are stamped into the past on
+  purpose — never a lifetime extension), revokes what the stamp expired, and caps accounts by
+  keeping the newest live `MAX_ACTIVE_SESSIONS` rows. **Live-verified twice on `workzen_hrms_test`**
+  (first run: column added, 114 legacy rows backfilled; re-run: full no-op).
   Accept: live count of `revoked_at IS NULL` ≤ users × 5, and no active session older than the
-  configured max age.
-  Test: unit (DB-free, SQL-shape) + one HTTP case; **needs approval to touch `workzen_hrms`**.
-  Risk: revoking live sessions signs users out — coordinate, use a scratch schema first.
+  configured max age. — **verified on the scratch schema; the production run on `workzen_hrms` is
+  a one-command operator step (see DEPLOYMENT.md), never executed here.**
+  Test: unit (DB-free, SQL-shape) + HTTP: `auth-session-http` 11/11 and `auth-session` 18/18 live
+  against the scratch schema after the change.
+  Risk: revoking live sessions signs users out — documented for the operator; scratch schema used.
 
 - [x] **T-003 · Hash stored password-reset codes** · P0 · DONE 2026-11-02 (code, static schema, DB-free tests; live-DB items gated on T-007) · deps: none
   Files: `backend/src/controllers/authController.js` (new exported `hashResetCode(code)` =
@@ -96,14 +112,29 @@ Legend — **P0** security/data-integrity · **P1** essential function & major w
   `migrate-password-reset-codes.js` against a live DB, and the `password-reset.test.js` (33-case)
   live-flow regression, which writes to the DB.
 
-- [ ] **T-004 · Add `helmet` and a global HTTP rate limiter** · P0 · TODO · deps: none
-  Files: `backend/server.js:50-58`, `backend/package.json`
+- [x] **T-004 · Add `helmet` and a global HTTP rate limiter** · P0 · DONE 2026-11-19 · deps: none
+  Files: **new `backend/src/config/securityConfig.js`** (single source of truth, importable
+  without booting the DB), `backend/server.js` (thin mounts), `backend/package.json`
+  (`helmet ^8`, `express-rate-limit ^8`), **new `backend/test/security-headers.test.js`** (12
+  cases, DB-free, registered in `test` and `test:dbfree`).
   Do: security headers (CSP tuned for the SPA, `X-Content-Type-Options`, frame-ancestors, HSTS off
   until TLS), plus `express-rate-limit` on `/api/*` with looser limits for authenticated reads;
-  set `app.set('trust proxy', …)` deliberately.
-  Accept: `npm run dev` + frontend smoke passes with headers present and no CORS regression.
-  Test: extend `error-body-sanitization` style static check + a header assertion suite.
-  Risk: CSP can break inline styles in the 11 CSS/JSX files — verify the SPA renders.
+  set `app.set('trust proxy', …)` deliberately. — **done:**
+  • CSP: `default-src 'self'`, `script-src 'self'`, `style-src 'self' 'unsafe-inline'` (the Vite
+  shell carries inline styles), `img-src 'self' data: blob:`, `connect-src 'self' + CORS_ORIGIN`,
+  `frame-ancestors 'none'`, `object-src 'none'`; `X-Frame-Options: DENY`, `nosniff`, strict
+  referrer policy, `hsts: false` until TLS.
+  • `TRUST_PROXY` validated by `resolveTrustProxy()` (true/false/loopback/hop-count/CIDR-list;
+  anything else refuses the boot — a silently spoofable X-Forwarded-For is a boot error, not a
+  warning). Default: no proxy.
+  • Global `/api` limiter, tiers per 60s window: authenticated reads 900, unauthenticated 300,
+  mutations 300 (roomy by design — an office behind one NAT IP shares the unauthed budget, and
+  legitimate HR bursts are hundreds of calls; credential-guessing stays with the per-account
+  DB throttle). Preflight is never counted; `/api/health` is skipped; standard headers only.
+  Accept: verified live — headers present on every response, dry-run mail and CSV export
+  unaffected, all 13 HTTP suites pass against the limited server.
+  Risk: CSP can break inline styles in the 11 CSS/JSX files — verified: `style-src
+  'unsafe-inline'` keeps the SPA renderable (pinned by a fetch test).
 
 - [x] **T-005 · Pin JWT algorithms and sign with the validated secret** · P0 · DONE 2026-11-02 · deps: none
   Files: `backend/src/config/authConfig.js` (`JWT_ALGORITHM = "HS256"`, new export),
@@ -185,12 +216,20 @@ directory-authorization/leave/password-reset/payroll-generation/payroll/payslip/
   18 tables / 3 views / 3 triggers / 1 procedure). Protected databases untouched (verified by listing
   schemas before and after: only `workzen_hrms`, `workzen_hrms_demo`, `workzen_hrms_fresh` pre-existed).
 
-- [x] **T-008 · Remove `temporary_password` from the create-user API response** · P0 · TODO · deps: none
-  Files: `backend/src/controllers/userController.js:116,147`, `frontend/src/components/CreateUserModal.jsx:100-138`
-  Do: deliver the temp credential via email only; UI shows "credentials emailed".
-  Accept: no plaintext credential in any response body or access log.
-  Test: extend `user-detail-privacy.test.js` (5 cases).
-  Risk: Admin loses the copy-paste convenience — confirm with product intent.
+- [x] **T-008 · Remove `temporary_password` from the create-user API response** · P0 · DONE 2026-11-19 · deps: none
+  Files: `backend/src/controllers/userController.js` (response), `frontend/src/components/CreateUserModal.jsx`
+  (display), **new `backend/test/create-user-response-privacy.test.js`** (5 cases, DB-free).
+  Do: deliver the temp credential via email only; UI shows "credentials emailed". — **done:** the
+  response now carries `credentials_emailed` + `email_delivery_status` ("emailed" / "mail-disabled"
+  / "failed") and no credential field; the plaintext exists only inside the welcome email (the
+  internal `userDetails` mail payload is unchanged). The modal shows an emailed confirmation, an
+  explicit mail-disabled warning, or an email-failed warning — never a password.
+  Accept: verified — the suite deep-scans every response body for the exact mailed secret and any
+  16-hex credential shape, and asserts no console line ever carries it, across both outcomes.
+  Test: 5/5 DB-free.
+  Risk (product decision confirmed): in a mail-disabled environment the Admin can no longer
+  read the temp password from the UI — the account needs SMTP configured and the password-reset
+  flow; the modal states this explicitly.
 
 ## Phase B — P1 (functional honesty; ~1 week)
 

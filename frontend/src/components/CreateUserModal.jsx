@@ -37,6 +37,8 @@ const CreateUserModal = ({ isOpen, onClose, onUserCreated }) => {
         setCreatedUser({
           ...response.data.data,
           emailSent: response.data.emailSent,
+          credentialsEmailed: response.data.credentials_emailed,
+          emailDeliveryStatus: response.data.email_delivery_status,
           message: response.data.message,
         });
         onUserCreated(response.data.data);
@@ -99,21 +101,9 @@ const CreateUserModal = ({ isOpen, onClose, onUserCreated }) => {
                   <strong>Email:</strong> {createdUser.email}
                 </p>
                 <p>
-                  <strong>Temporary Password:</strong>{" "}
-                  <code
-                    style={{
-                      background: "#333",
-                      padding: "4px 8px",
-                      borderRadius: "4px",
-                    }}
-                  >
-                    {createdUser.temporary_password}
-                  </code>
-                </p>
-                <p>
                   <strong>Employee Code:</strong> {createdUser.employee_code}
                 </p>
-                {createdUser.emailSent ? (
+                {createdUser.credentialsEmailed ? (
                   <p
                     style={{
                       marginTop: "10px",
@@ -121,8 +111,24 @@ const CreateUserModal = ({ isOpen, onClose, onUserCreated }) => {
                       color: "#155724",
                     }}
                   >
-                    ✉️ <strong>Welcome email sent successfully!</strong> The
-                    user will receive their credentials at {createdUser.email}
+                    ✉️ <strong>Credentials emailed.</strong> The temporary
+                    password was sent to {createdUser.email} and is shown here
+                    only for the recipient - it is never displayed in this
+                    application.
+                  </p>
+                ) : createdUser.emailDeliveryStatus === "mail-disabled" ? (
+                  <p
+                    style={{
+                      marginTop: "10px",
+                      fontSize: "13px",
+                      color: "#856404",
+                    }}
+                  >
+                    ⚠️ <strong>Credential not delivered.</strong> Mail is
+                    disabled in this environment, so no temporary password was
+                    sent and none can be shown. Configure SMTP and have the
+                    user use the password-reset flow once they can receive
+                    email.
                   </p>
                 ) : (
                   <p
@@ -132,8 +138,10 @@ const CreateUserModal = ({ isOpen, onClose, onUserCreated }) => {
                       color: "#856404",
                     }}
                   >
-                    ⚠️ Email could not be sent. Please manually share these
-                    credentials with the user.
+                    ⚠️ <strong>Email failed to send.</strong> The temporary
+                    password could not be delivered - no credential is shown
+                    here. Retry with mail configured and use the password-reset
+                    flow.
                   </p>
                 )}
               </div>
