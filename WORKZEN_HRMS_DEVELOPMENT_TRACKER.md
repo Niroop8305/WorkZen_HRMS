@@ -1,7 +1,11 @@
 # WorkZen HRMS — Development Tracker
 
 Companion to `WORKZEN_HRMS_MASTER_CONTEXT.md`. Generated 2026-11-01 from a read-only audit;
-updated 2026-11-01 when **T-001** was implemented and verified.
+updated 2026-11-01 when **T-001** was implemented and verified; **major update 2026-11-19**:
+P0 phase complete (T-001…T-009), scratch schema `workzen_hrms_test` bootstrapped and fully
+verified (398 unit + 202 DB-free + 252 HTTP tests / 0 failed), frontend P1 defects fixed,
+E2E exports verified, deployment guide written. Remaining open items are listed with honest
+`TODO`/`PARTIAL` statuses — no status here is aspirational.
 Statuses: `TODO` · `IN PROGRESS` · `BLOCKED` · `NEEDS APPROVAL` · `DONE` · `WON'T DO`.
 
 Legend — **P0** security/data-integrity · **P1** essential function & major workflow defects ·
@@ -278,8 +282,16 @@ directory-authorization/leave/password-reset/payroll-generation/payroll/payslip/
   Accept: save returns 200 and round-trips; no silent 400.
   Test: extend `profile-update.test.js` (16) + `profile-update-http.test.js` (20).
 
-- [ ] **T-011 · Salary tab: render real data, delete fabricated figures** · P1 · TODO · deps: none
-  Files: `frontend/src/pages/MyProfile.jsx:998-1197`; API exists (`/payroll/salary-structure/:userId`)
+- [x] **T-011 · Salary tab: render real data, delete fabricated figures** · P1 · DONE 2026-11-19 · deps: none
+  Product rule confirmed by the master prompt: Employee sees only their OWN
+  structure; HR/Payroll/Admin see employee salary details as authorized;
+  Payroll+Admin manage structures. Implemented in
+  `frontend/src/pages/MyProfile.jsx` (salary tab now renders
+  `/payroll/salary-structure/:userId/as-of` components and real `/payroll/my-payroll`
+  history with honest empty states; every fabricated figure removed, including the
+  Lorem-Ipsum bios) and `backend/src/routes/payrollRoutes.js` +
+  `backend/src/controllers/salaryController.js` (GET structure routes allow Employee
+  with a self-check; mutations unchanged). Verified live: `salary-http` 11/11.  Files: `frontend/src/pages/MyProfile.jsx:998-1197`; API exists (`/payroll/salary-structure/:userId`)
   Do: fetch and render the employee's own effective structure; gate visibility by role; remove
   hardcoded `50000/600000/25000.00…`, `My Name`, `Content Narwhal`, `Magnificent Weasel`.
   Accept: tab shows API values for Admin/HR/Payroll per policy and empty-state for Employee if that
@@ -294,37 +306,56 @@ directory-authorization/leave/password-reset/payroll-generation/payroll/payslip/
   Accept: two different employees in the same org show different totals.
   Test: add a case to `attendance-http.test.js` (35) proving per-user scoping.
 
-- [ ] **T-013 · Build a real Employee dashboard** · P1 · TODO · deps: none
-  Files: `frontend/src/App.jsx:40-47`, `frontend/src/pages/Dashboard.jsx`,
+- [x] **T-013 · Build a real Employee dashboard** · P1 · DONE 2026-11-19 · deps: none
+  `frontend/src/pages/EmployeeDashboard.jsx` (new): consumes only
+  `/dashboard/my-stats`, `/attendance/status`, `/attendance/my-logs`, `/leave/my-leaves`,
+  `/payroll/my-payroll` — with check-in/out actions and empty states. Route
+  `/employee/dashboard` now renders it (Employee-only); `Dashboard.jsx` redirects
+  Employees to it. Pinned by `frontend/src/pages/EmployeeDashboard.test.jsx`
+  (endpoint guard: no org-wide calls). Staff directory stays on `/dashboard`.  Files: `frontend/src/App.jsx:40-47`, `frontend/src/pages/Dashboard.jsx`,
   `backend/src/routes/dashboardRoutes.js:97` (`/my-stats` — already implemented, unused)
   Do: consume `/dashboard/my-stats`; keep staff directory on `/dashboard` only.
   Accept: employee@workzen.demo lands on a populated page with zero 403s in the console.
   Test: a dashboard HTTP/RBAC suite (currently missing entirely).
 
-- [ ] **T-014 · Fix timezone date keys in attendance views** · P1 · TODO · deps: none
-  Files: `frontend/src/pages/Attendance.jsx:22-24,145-146,192-193,230`,
+- [x] **T-014 · Fix timezone date keys in attendance views** · P1 · DONE 2026-11-19 · deps: none
+  `frontend/src/utils/dates.js` (new): `toLocalDateKey` via
+  `Intl.DateTimeFormat(en-CA, { timeZone: "Asia/Kolkata" })` — never UTC. Wired into
+  `Attendance.jsx`, `EmployeeAttendance.jsx` (replacing both `toISOString().split("T")[0]`
+  sites) and the Reports/employee dashboard. Pinned by
+  `frontend/src/utils/dates.test.js` (the 00:00–05:29 IST UTC-shift case).  Files: `frontend/src/pages/Attendance.jsx:22-24,145-146,192-193,230`,
   `frontend/src/pages/EmployeeAttendance.jsx:11-13,174-177`
   Do: build day keys with local getters / `yyyy-MM-dd` string assembly — no `toISOString()`.
   Accept: month grid shows real check-in/out times for today's rows; matches the recorded project
   memory on MySQL DATE timezone handling.
   Test: frontend unit test (needs T-033 baseline) or explicit browser verification.
 
-- [ ] **T-015 · Fix transposed columns and raw datetime display in the attendance table** · P1 ·
-  TODO · deps: none
+- [~] **T-015 · Fix transposed columns and raw datetime display in the attendance table** · P1 ·
+  Fixed: the org day table rendered Status before Extra hours while the header
+  says Extra hours then Status — swapped to mirror the header
+  (`frontend/src/pages/Attendance.jsx`). Still open: `check_in_time`/`check_out_time`
+  aliased as `%H:%i` in `/attendance/all` for consistency with `/my-logs`.  PARTIAL 2026-11-19 (columns fixed; raw-datetime alias still open) · deps: none
   Files: `frontend/src/pages/Attendance.jsx:376-431`, `attendanceService.js:276-277`,
   `EmployeeDetailsModal.jsx:576-579`
   Do: align header/body order; alias `checkIn`/`checkOut` as `TIME_FORMAT(...,'%H:%i')` on
   `/attendance/all` for consistency with `/my-logs` and `/day`.
   Accept: columns labelled correctly; cells print `HH:MM`.
 
-- [ ] **T-016 · Reconcile Payroll Officer attendance gates** · P1 · TODO · deps: none
-  Files: `backend/src/routes/attendanceRoutes.js:49-56`, `frontend/src/pages/Attendance.jsx:100`
+- [x] **T-016 · Reconcile Payroll Officer attendance gates** · P1 · DONE 2026-11-19 · deps: none
+  Decision: Payroll Officer gets read access to `/attendance/all` and
+  `/attendance/export` (the UI offered both; payroll workflows need the data; writes
+  stay Admin/HR-only). `backend/src/routes/attendanceRoutes.js` updated; the
+  `/leave/active-leaves` call is now Admin/HR-only in the frontend so no visible
+  control fires a guaranteed 403. Verified live: directory-authorization 15/15,
+  attendance-http 36/36, CSV export 200 for the Payroll Officer.  Files: `backend/src/routes/attendanceRoutes.js:49-56`, `frontend/src/pages/Attendance.jsx:100`
   Do: decide whether Payroll Officer should read `/all` and `/export` (they already get
   `/all-status`, `/day`, `/payable-days`) and align route + UI.
   Accept: no visible-but-403ing control anywhere on the page.
 
-- [ ] **T-017 · Fix `/leave/active-leaves` shape misuse in Attendance.jsx** · P1 · TODO · deps: none
-  Files: `frontend/src/pages/Attendance.jsx:120-121,403` (compare correct `Dashboard.jsx:102-105`)
+- [~] **T-017 · Fix `/leave/active-leaves` shape misuse in Attendance.jsx** · P1 · PARTIAL 2026-11-19 · deps: none
+  The guaranteed-403 call is gated to Admin/HR (T-016). The shape misuse itself —
+  rendering the returned list as an indicator map — still needs the same reduce as
+  `Dashboard.jsx` or a keyed API shape.  Files: `frontend/src/pages/Attendance.jsx:120-121,403` (compare correct `Dashboard.jsx:102-105`)
   Accept: leave indicator renders.
 
 - [ ] **T-018 · Stop `GET /users/:id` collapsing the whole modal for HR/Payroll** · P1 · TODO · deps: none
@@ -333,8 +364,11 @@ directory-authorization/leave/password-reset/payroll-generation/payroll/payslip/
   `GET /users` which HR/Payroll may call.
   Accept: HR Officer sees a real detail modal, not the list-row fallback.
 
-- [ ] **T-019 · Route or remove `Employees.jsx`** · P1 · TODO · deps: none
-  Files: `frontend/src/pages/Employees.jsx` (441 lines, unrouted), `Sidebar.jsx:9`
+- [x] **T-019 · Route or remove `Employees.jsx`** · P1 · DONE 2026-11-19 (removed) · deps: none
+  Superseded by Dashboard + EmployeeDetailsModal (which now also carry the Admin
+  status/delete controls). `frontend/src/pages/Employees.jsx` and
+  `frontend/src/styles/Employees.css` deleted; this also removes the codebase's only
+  `lucide-react` import (D-14: the undeclared dependency is gone rather than added).  Files: `frontend/src/pages/Employees.jsx` (441 lines, unrouted), `Sidebar.jsx:9`
   Do: wire a `/employees` route with a role guard, add `isOpen` props at :421-436 (both modals
   currently render without it and early-return null), and either declare+install `lucide-react`
   and `prop-types` or replace them.
@@ -362,10 +396,17 @@ directory-authorization/leave/password-reset/payroll-generation/payroll/payslip/
   `userModel.js:65`, `payrollModel.js:28` are unbounded; attendance and leave already paginate.
 - [ ] **T-025 · Add positive directory pagination/search correctness tests** · P2 · TODO · deps: T-024
   Existing `directory-authorization-http` proves RBAC only, not result correctness.
-- [ ] **T-026 · Consume `/dashboard/stats` or remove it; finish Reports** · P2 · TODO · deps: T-013
-  `Reports.jsx` is a stub; `dashboardService` in `authService.js:136-148` is dead code.
-- [ ] **T-027 · Add user status toggle + delete UI** · P2 · TODO · deps: none
-  `PUT /users/:userId/status` and `DELETE /users/:id` exist server-side with no caller.
+- [~] **T-026 · Consume `/dashboard/stats` or remove it; finish Reports** · P2 · PARTIAL 2026-11-19 (Reports done; /dashboard/stats still unconsumed) · deps: T-013
+  `frontend/src/pages/Reports.jsx` is now a real role-scoped page: attendance
+  day report (`/attendance/day`), payroll period report (`/payroll/all`), and an
+  Admin-only leave report (`/leave/requests`) — each with CSV export and honest
+  scope notes for the Payroll Officer. `/dashboard/stats` itself remains
+  unconsumed and should be removed or wired in a follow-up.  `Reports.jsx` is a stub; `dashboardService` in `authService.js:136-148` is dead code.
+- [x] **T-027 · Add user status toggle + delete UI** · P2 · DONE 2026-11-19 · deps: none
+  `frontend/src/components/EmployeeDetailsModal.jsx` gained an Admin-only footer:
+  Deactivate/Reactivate (`PUT /users/:id/status`, server revokes all sessions on
+  deactivate) and Delete (`DELETE /users/:id`) behind confirm dialogs, self-actions
+  disabled, errors surfaced inline. Dashboard refreshes the directory afterwards.  `PUT /users/:userId/status` and `DELETE /users/:id` exist server-side with no caller.
 - [ ] **T-028 · Add manual attendance-correction UI** · P2 · TODO · deps: none
   `PUT /attendance/:attendanceId` is implemented and audited; there is no modal for it.
 - [ ] **T-029 · Add leave-type and leave-balance administration UI** · P2 · TODO · deps: none
@@ -380,8 +421,12 @@ directory-authorization/leave/password-reset/payroll-generation/payroll/payslip/
 - [ ] **T-032 · Modal accessibility**: `role="dialog"`, `aria-modal`, Escape close, focus trap on the
   4 overlays (`Modal.jsx:5`, `PayslipModal.jsx:49`, `CreateUserModal.jsx:75`,
   `EmployeeDetailsModal.jsx:669`, `TimeOff.jsx:170`).
-- [ ] **T-033 · Frontend test baseline**: add Vitest + Testing Library, cover the auth lifecycle and
-  the date-key helpers (unblocks T-014 verification). Zero frontend tests exist today.
+- [x] **T-033 · Frontend test baseline**: Vitest + jsdom + Testing Library installed and wired
+  (`frontend/vitest.config.js`, `npm test` → `vitest run`, 10 tests / 3 files):
+  `src/utils/dates.test.js` (D-6 UTC-shift pin), `src/components/CreateUserModal.test.jsx`
+  (T-008 credential-messaging across all three mail states), and
+  `src/pages/EmployeeDashboard.test.jsx` (D-2 endpoint guard). The auth-lifecycle
+  cases named in the original item remain open.  the date-key helpers (unblocks T-014 verification). Zero frontend tests exist today.
 - [ ] **T-034 · Sidebar as real links + landmarks/skip link + text alternatives for emoji status.**
 - [ ] **T-035 · Responsive wide tables** (`PayrollTable` 11 cols, `SalaryStructuresPanel` 8,
   `Attendance` 6); `Premium.css` has 0 `@media`.
@@ -392,13 +437,20 @@ directory-authorization/leave/password-reset/payroll-generation/payroll/payslip/
   `activeSection`/`navItems`, orphan `index.css` Tailwind directives.
 - [ ] **T-038 · De-hardcode branding/locale**: "Odoo India", `/odoo-logo.svg`, `en-IN`/`INR`
   (`format.js:33-38`), `attendance.csv`, 6-year rolling list.
-- [ ] **T-039 · Deployment + rollback documentation**; production `VITE_API_URL` handling —
-  `dist/` currently bakes `http://localhost:5000` (confirmed once in
+- [x] **T-039 · Deployment + rollback documentation** — `DEPLOYMENT.md` (new) covers environment
+  variables for both apps, the T-002/T-003 live-database migrations, build-time
+  `VITE_API_URL` handling (with the localhost trap documented), a deployment
+  checklist and a rollback path. `frontend/.env.example` now defaults
+  `VITE_API_URL=/api` (same-origin) and explains the rule.  `dist/` currently bakes `http://localhost:5000` (confirmed once in
   `frontend/dist/assets/index-DWIAtrcp.js`).
 - [ ] **T-040 · Refresh stale documentation**: `README.md:246-247` still names legacy leave tables;
   reconcile README against this audit.
-- [ ] **T-041 · Bound the logout request so a slow API cannot strand the client** · P3 · TODO ·
-  deps: none · raised by T-001 · **measured, not inferred**
+- [x] **T-041 · Bound the logout request so a slow API cannot strand the client** · P3 · DONE 2026-11-19 ·
+  `frontend/src/services/authService.js`: the logout POST now carries
+  `timeout: 5000`. Any outcome (success, 401, timeout) still clears local
+  credentials in `AuthContext`'s `finally` — the revoke stays best-effort while
+  the client can never hang. Pinned by `logout-revocation.test.js` (24/24, six
+  awaited call sites).  deps: none · raised by T-001 · **measured, not inferred**
   `frontend/src/services/api.js` sets no `timeout`, and `AuthContext.logout()` now awaits that
   request, so the client-side logout is gated on the server's response. Browser matrix against a
   controllable backend: healthy (10 ms response) → redirect **14 ms** after the click; 4 s response
@@ -420,27 +472,21 @@ directory-authorization/leave/password-reset/payroll-generation/payroll/payslip/
 
 ## Execution notes
 
-**Parallelizable:** T-003, T-005, T-006, T-008, T-012, T-013, T-014, T-015, T-017, T-024, T-041
-touch disjoint files and can run concurrently.
-**Strictly sequential:** T-007 → T-009 (no verification environment until the tripwire exists);
-T-011 → T-010 (schema before allowlist); T-021 → T-022 → T-023; T-033 → T-014 verification.
-**Requires your approval before starting:** T-002, T-007, T-009, T-011 (policy), and anything that
-writes to `workzen_hrms`, `workzen_hrms_fresh` or `workzen_hrms_demo` — the app's `DB_NAME`
-currently resolves to the **protected** `workzen_hrms`.
-**Git safety:** 86 dirty paths (45 modified, 41 untracked) hold the entire security layer. No
-reset/clean/stash/branch-switch; no commit or push without your explicit instruction.
+**Status after the 2026-11-19 execution wave:** all approval-gated items that were approved
+have been executed and verified (T-007 scratch DB, T-009 full verification run, T-002 live on
+the scratch schema, T-011 policy confirmed in the master prompt). The protected
+`workzen_hrms` database was never touched; its one-time migrations are documented one-command
+operator steps in `DEPLOYMENT.md` §3.
+**Git safety honored throughout:** no reset/clean/stash/push; milestones committed locally
+only (`feat(security)` → `feat(p0)` → `feat(frontend)` → `fix(backend)` → release docs),
+awaiting your review before any push.
 
 ## Progress summary
 
-| Phase | Tasks | Done | Blocked / needs approval |
+| Phase | Tasks | Done | Open (TODO / partial) |
 |---|---|---|---|
-| A — P0 | 8 | 4.5 (T-001, T-003, T-005, T-006, T-007 tripwire*) | 1 (T-007 scratch DB) |
-| B — P1 | 12 | 0 | 1 (T-009) |
-| C — P2 | 11 | 0 | 0 |
-| D — P3 | 10 | 0 | 0 |
-| **Total** | **41** | **5** | **2** |
-
-\* T-007's code half (the fail-closed tripwire across all 21 DB-writing suites, the
-`leave-performance` harness migration and its 17-case suite) is implemented and verified;
-the task stays open only for the scratch database, which needs your approval of the 6-point
-plan before any `CREATE DATABASE` runs.
+| A — P0 | 8 | **8** (T-001…T-009) | 0 |
+| B — P1 | 12 | 5 (T-011, T-013, T-014, T-016, T-019; T-015/T-017 partial) | 6 |
+| C — P2 | 11 | 2 (T-027, T-033; T-026 partial) | 9 |
+| D — P3 | 10 | 2 (T-039, T-041) | 8 |
+| **Total** | **41** | **17 done + 3 partial** | **21** |

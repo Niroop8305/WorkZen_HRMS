@@ -353,7 +353,10 @@ describe(
           "/leave/requests?limit=5",
           "/payroll/all?month=9&year=2026",
           "/payroll/components",
-          `/payroll/salary-structure/${employeeId}`,
+          // T-011: reading their OWN structure is authorized; another
+          // employee's structure stays forbidden (employeeId+1 is synthetic
+          // emp0002, never the caller).
+          `/payroll/salary-structure/${employeeId + 1}`,
           "/users",
         ]) {
           const { status } = await call(path, { headers: auth(employeeToken) });

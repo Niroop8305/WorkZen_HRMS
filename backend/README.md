@@ -25,15 +25,31 @@ Smart Human Resource Management System - Backend API
 10. **payroll** - Monthly payroll records
 11. **payroll_details** - Detailed breakdown of payroll components
 12. **audit_logs** - System activity audit trail
+13. **password_reset_codes** - Short-lived password reset codes
+14. **user_sessions** - Server-side JWT session registry (HIGH-3 revocation), part of
+    `schema.sql` so `npm run init-db` creates it; `npm run migrate:user-sessions` adds it
+    to a database created before it was in the base schema
 
 ### Key Features
 
 - **Foreign Key Relationships** for data integrity
 - **Indexes** for optimized queries
 - **Views** for the user directory and dashboard aggregates
-- **`audit_logs`** append-only trail for sensitive mutations
-- All business logic lives in the **service layer** — there are no triggers or
-  stored procedures.
+- **`audit_logs`** append-only trail for key sensitive mutations
+- **3 triggers + 1 stored procedure** installed by `npm run init-db`
+  (`triggers.sql`, `procedures.sql`):
+  - `after_leave_approval` — the **sole** writer of
+    `leave_balance.used_days`/`remaining_days`; it deducts paid balance on a
+    Pending→Approved transition and restores it on Approved→Cancelled. The Leave
+    service locks and pre-validates the balance and changes the application
+    status, but does not update the balance columns directly.
+  - `before_attendance_insert` / `before_attendance_update` — maintain the
+    derived `attendance.total_hours` column; the Attendance service owns the
+    authoritative status and worked/late/early-checkout minute fields.
+  - `calculate_leave_days` — installed but **not called** by the application;
+    Leave duration is computed in JavaScript.
+- Business logic lives in the **service layer**; the triggers above are the
+  narrow, intentional exceptions documented here.
 
 ## Installation
 
@@ -54,16 +70,45 @@ Smart Human Resource Management System - Backend API
    JWT_SECRET=your_secret_key
    ```
 
-3. **Initialize Database**
+3. **Initialize the database and demo data (recommended)**
    ```bash
-   npm run init-db
+   npm run setup:demo
    ```
-   
-   This will:
-   - Create the database
-   - Create all tables with relationships
-   - Insert default roles and leave types
-   - Set up the read views consumed by the user and dashboard surfaces
+
+   This single command is the documented fresh-clone path. It runs five ordered stages
+   and prints each one:
+
+   1. `schema.sql` + `procedures.sql` + `triggers.sql` (any `CREATE DATABASE`/`USE`
+      binding is stripped, so the target schema comes from `DB_NAME` or `--database=`)
+   2. Migrations in dependency order, each guarded by an `INFORMATION_SCHEMA` check so a
+      rerun is a no-op:
+      `attendance` derived columns + `unique_user_attendance_date` →
+      `salary_components.calculation_type` → `user_sessions` → the
+      `after_leave_approval` leave-cancellation trigger
+   3. Demo account seeding (skipped when the four `@workzen.demo` accounts exist;
+      `--reseed-demo-users` refreshes them explicitly)
+   4. Deterministic benchmark dataset generation
+   5. Post-seed integrity verification — 22 checks; the command exits non-zero on failure
+
+   Setup never drops a schema and never reseeds an existing database. `init-db` and the
+   individual `migrate:*` scripts remain available for a schema-only install or for
+   re-running one migration, but `setup:demo` is the command a new developer should use.
+
+   **Session table before the first login.** `protect` validates every JWT against
+   `user_sessions` and fails closed, so an API that cannot read that table answers 500 to
+   *every* authenticated request. `schema.sql` now creates it, so `init-db` is enough for
+   a fresh clone; a database created before HIGH-3 needs `npm run migrate:user-sessions`
+   once. `npm run setup:demo` covers both because its migration stage runs the same step.
+
+   Flags: `--database=<schema>`, `--dry-run`, `--skip-generate`, `--seed`,
+   `--employees`, `--months`, `--leave-applications`, `--chunk-size`, `--end-period`,
+   `--force-reseed-benchmark --yes` (deletes only `%@workzen.test` rows). Generation and
+   setup both refuse `NODE_ENV=production`.
+
+   ```bash
+   npm run verify:demo          # re-run stage 5 against DB_NAME / --database=
+   npm run generate:benchmark   # dataset only, resumable
+   ```
 
 4. **Start Server**
    ```bash
@@ -74,7 +119,8 @@ Smart Human Resource Management System - Backend API
 
    ## Demo Users
 
-   Run `npm run seed:demo` to create or refresh local demo accounts:
+   `npm run setup:demo` (or `npm run seed:demo` on its own) creates or refreshes the
+   local demo accounts:
 
    | Role | Email | Password |
    |---|---|---|
@@ -82,6 +128,53 @@ Smart Human Resource Management System - Backend API
    | HR Officer | `hr@workzen.demo` | `Hr@123` |
    | Payroll Officer | `payroll@workzen.demo` | `Payroll@123` |
    | Employee | `employee@workzen.demo` | `Employee@123` |
+   | Synthetic benchmark employee | `emp0001@workzen.test` … `emp1000@workzen.test` | `Benchmark@123` |
+
+   ## Benchmark dataset
+
+   The generator produces one deterministic population from `--seed` (default
+   `20261001`) so a demo environment can be rebuilt identically on any machine:
+
+   | Object | Rows |
+   |---|---:|
+   | Synthetic employees | 1,000 |
+   | Attendance rows (synthetic) | 221,000 |
+   | Leave applications | 12,300 |
+   | Payroll records | 10,150 |
+   | Payroll component snapshots | 30,450 |
+   | `leave_balance` rows | 12,000 |
+   | `audit_logs` rows written by generation | 0 |
+
+   Volumes come from the application's own rules, not from padding counters: the payroll
+   window Dec-2025 … Sep-2026 holds 218 Mon–Fri dates and the senior cohort's extra
+   month (Nov-2025) holds 20, so `850 × 218 + 150 × 238 = 221,000` attendance rows. The
+   shared demo employee additionally receives 218 attendance rows, 13 leave
+   applications and 10 payroll periods, which is why the `attendance` table itself holds
+   221,218 rows.
+
+   Every generated value reuses the live code paths: `calculateAttendanceMetrics()` for
+   attendance status and minutes, `countWorkingDays()` /
+   `attendancePayableDays()` / `paidLeaveDaysForPeriod()` / `calculatePayroll()` for
+   payroll, real `Pending → Approved → Cancelled` status transitions so the
+   `after_leave_approval` trigger maintains paid balances, and effective-dated salary
+   structures with `Basic` (FIXED), `HRA` (PERCENTAGE) and `PF` (FIXED deduction) so both
+   `calculation_type` branches are exercised. Writes are batched inside one transaction
+   per employee; `generatePayroll()` is not called 10,150 times, and
+   `test/demo-dataset-http.test.js` recomputes a 21-record spread sample with the live
+   service functions to prove the snapshots agree.
+
+   Guarantees enforced by the planner and re-checked in `verify:demo`: no negative net
+   salary, weekday-only attendance with one row per user and date, non-overlapping
+   single-calendar-year leave windows inside the annual allocation, paid balance rows
+   equal to approved leave, payroll snapshots matching their component rows, only
+   supported payroll periods, no synthetic audit rows, and no partially generated
+   employee after an interrupted run.
+
+   Verify it at any time:
+
+   ```bash
+   npm run verify:demo -- --database=workzen_hrms_fresh
+   ```
 
 ## API Endpoints
 
@@ -149,16 +242,23 @@ LEAVE_API_URL='http://localhost:5000/api' npm run test:leave:perf
 - `POST /apply` - Submit a pending leave application
 - `GET /my-leaves` - Get the authenticated employee's leave history
 
-The Leave foundation uses only `leave_types`, `leave_balance`, and
-`leave_applications`. Legacy `leave_requests`, `leave_balances`,
-`leave_allocations`, and `leave_requests_view` are not used.
+The Leave milestone (frozen) uses only `leave_types`, `leave_balance`,
+`employee_profiles`, `users`, `audit_logs`, and `leave_applications`. Legacy
+`leave_requests`, `leave_balances`, `leave_allocations`, and
+`leave_requests_view` must not be recreated or used.
+
+The foundation additionally uses `password_reset_codes` (SHA-256 digests,
+T-003), `user_sessions` (revocable sessions with absolute expiry, T-002) and
+`auth_throttle` (per-account throttle counters).
 
 Leave days are calculated inclusively while excluding Saturday and Sunday.
 Holidays and partial-day leave are not currently modeled. Applications must
 remain within one calendar year, and pending or approved periods cannot
 overlap for the same employee. Submitting an application does not deduct
-balance; approving paid leave deducts it inside a locked transaction, and
-cancelling an approved paid leave restores it. Unpaid leave never mutates the
+balance. The service locks and pre-validates the balance inside a transaction
+and then changes the application status; the `after_leave_approval` database
+trigger is the sole writer that deducts paid balance on approval and restores
+it when an approved paid leave is cancelled. Unpaid leave never mutates the
 paid balance.
 
 ### Payroll (`/api/payroll`)
@@ -258,7 +358,17 @@ backend/
 │   │   └── authController.js   # Authentication logic
 │   ├── database/
 │   │   ├── schema.sql          # Complete database schema
-│   │   └── init.js             # Database initialization
+│   │   ├── init.js             # Schema-only initialization
+│   │   ├── setup-demo.js       # npm run setup:demo — ordered fresh-clone setup
+│   │   ├── verify-demo.js      # npm run verify:demo — post-seed integrity checks
+│   │   ├── generate-benchmark.js # npm run generate:benchmark — dataset writer/CLI
+│   │   ├── benchmark/
+│   │   │   └── plan.js         # Deterministic planning (no database access)
+│   │   ├── setup/
+│   │   │   ├── schemaSetup.js  # Schema + ordered, idempotent migration runner
+│   │   │   └── verifyDemoData.js # 22 integrity/uniqueness/business-rule checks
+│   │   ├── migrate-*.js        # Individual idempotent migrations
+│   │   └── seed-demo-users.js  # Demo account seeding
 │   ├── middleware/
 │   │   ├── auth.js             # JWT & role verification
 │   │   └── errorHandler.js     # Error handling
@@ -287,6 +397,29 @@ backend/
 - Environment variable protection
 
 ## Testing
+
+```bash
+npm test                        # 165 unit/integration tests, includes the pure
+                                # benchmark-generator planner suite
+npm run test:demo-dataset:http  # env-gated; needs a server + DB_NAME pointed at a
+                                # generated non-production schema
+npm run test:payroll:http
+npm run test:payslip:http
+npm run test:leave:http
+npm run test:session:http
+npm run test:profile:http
+```
+
+`test/benchmark-generator.test.js` opens no database connection, so `npm test` verifies
+the dataset planner (determinism, weekday calendars, leave allocation, attendance
+policy, payroll arithmetic, argument parsing) anywhere. The HTTP suites are skipped
+unless their env URL is set. To exercise the generated dataset end to end:
+
+```bash
+npm run setup:demo -- --database=workzen_hrms_fresh
+DB_NAME=workzen_hrms_fresh PORT=5062 node server.js &
+DEMO_DATASET_API_URL=http://localhost:5062/api DB_NAME=workzen_hrms_fresh npm run test:demo-dataset:http
+```
 
 Health check endpoint:
 ```

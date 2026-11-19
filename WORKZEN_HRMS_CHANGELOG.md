@@ -4,6 +4,47 @@ Nothing here is committed. All changes below are uncommitted working-tree work o
 (`87e3950 chore: finalize WorkZen V2`), alongside ~45 pre-existing modified and ~41 untracked
 files from the earlier security / login-throttle / production-readiness tracks.
 
+## [Milestone 4 + 5] Reliability hardening, E2E export verification, IPC-flake fix, deployment readiness — 2026-11-19
+
+**Status:** done. Roadmap reference: tracker → T-016 (D-9), T-011, T-027, T-033, T-039, T-041, D-10, D-18.
+
+### Fixed
+
+- **D-18 (connection leaks):** the attendance CSV export now releases its pooled
+  connection on client disconnect (`res.on("close")`, released exactly once), not only on
+  stream end/error. Audited every `getConnection` site: all end in `finally { release() }`.
+- **D-10 (atomic init-db):** `npm run init-db` now runs the ordered, idempotent pipeline
+  (schema → procedures → triggers → migrations → `verifyEffectiveSchema`) and **exits
+  non-zero on any verification gap** — the old script treated procedures/triggers failures
+  as optional notes and could leave a silently half-initialized database. Live-verified on
+  the scratch schema.
+- **D-9 / T-016 (Payroll Officer attendance):** `/attendance/all` and `/attendance/export`
+  now allow the Payroll Officer (read-only; the UI offered both). Verified live: CSV export
+  200 with 220k rows for the Payroll Officer; directory-authorization 15/15.
+- **T-003 live ALTER:** `migrate-password-reset-codes.js` now reconciles an existing table
+  idempotently — widens `reset_code` to VARCHAR(64), enforces `expires_at DATETIME NOT NULL`,
+  adds the composite lookup index — instead of no-oping on any existing table. Demonstrated
+  live: simulated VARCHAR(6) widened back to VARCHAR(64); verified suite totals unchanged.
+- **email-transport-policy IPC flake (fixed):** the suite's `net.Socket.prototype.connect`
+  stub could corrupt the test runner's child-IPC channel on Windows
+  ("Unable to deserialize cloned data"), killing the file intermittently. The suite now
+  runs in-process (`--experimental-test-isolation=none` in the `test` and `test:dbfree`
+  scripts) where it is deterministic (8/8 across repeated runs), and its forced-failure
+  stderr logging is captured and **asserted** instead of interleaving multi-line stacks with
+  the runner channel.
+- **T-041 + RBAC policy pins:** `logout-revocation.test.js` pins the six awaited call sites
+  and the bounded logout request; `attendance-http` and `salary-http`/`demo-dataset-http`
+  matrices updated to the confirmed T-011/D-9 policies.
+
+### Verified end-to-end on `workzen_hrms_test`
+
+- PDF payslip: HTTP 200, `%PDF-` magic, 2,908 bytes, net figure matches the payroll row.
+- Attendance CSV export: HTTP 200, `text/csv`, 220,668 data rows, correct header.
+- Dry-run email notifications: exercised across reset/welcome/forced-failure paths.
+- RBAC boundaries across all 4 roles: re-verified by the 13-suite HTTP pass (252/252)
+  and anonymous/Employee `/users` denials (401/403).
+- `npm run init-db` verification pass green; `migrate:session-expiry` no-op on re-run.
+
 ## [T-004 + T-008 + T-002] HTTP perimeter, credential-privacy, session expiry — 2026-11-19
 
 **Status:** done (all three P0s). Roadmap reference: tracker → T-004, T-008, T-002.

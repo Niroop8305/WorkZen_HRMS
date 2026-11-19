@@ -3,7 +3,7 @@
 WorkZen is a production-style HRMS that consolidates **Attendance**, **Leave**, and
 **Payroll** into a single, secure, role-aware backend with a React self-service
 frontend. It is built to be measurable: every calculation is server-authoritative,
-every sensitive operation is audited, and the headline endpoints were benchmarked
+key sensitive mutations are audited, and the headline endpoints were benchmarked
 against a 1,000-employee dataset rather than a toy fixture.
 
 - **Team:** Team-68 — LaxmiNiroop Papani, Sharath Chandra Chandupatla, Zainab Amreen, Ishrath Jasmine
@@ -21,7 +21,7 @@ truth. WorkZen replaces that with one system where:
 - employees self-serve attendance, leave, and payslips;
 - HR runs approvals and org-wide reporting;
 - Payroll Officers generate payslips from a governed, effective-dated salary model;
-- every change is traceable through a single audit trail.
+- key sensitive mutations are traceable through a single audit trail.
 
 ---
 
@@ -42,8 +42,11 @@ truth. WorkZen replaces that with one system where:
 
 - Database-backed leave types and annual balances.
 - Weekday-only applications, inclusive day counting, and overlap detection.
-- HR/Admin approval and rejection; approval deducts paid balance inside a locked
-  transaction, cancellation restores it. Unpaid leave never mutates paid balance.
+- HR/Admin approval and rejection. The service locks and pre-validates the balance
+  inside a transaction, then changes the application status; the
+  `after_leave_approval` database trigger is the sole writer that deducts paid
+  balance on approval and restores it on cancellation. Unpaid leave never mutates
+  paid balance.
 - Org-wide request lists with server-side filters/pagination, active-leave and audit
   reports, and non-blocking email notifications.
 
@@ -52,7 +55,9 @@ truth. WorkZen replaces that with one system where:
 - Governance-able salary components and effective-dated salary structures with
   overlap protection and as-of resolution.
 - A single calculation engine (no duplicate paths) that consumes frozen Attendance
-  and Leave data to compute payable days, pro-rated PF, gross, and net.
+  and Leave data to derive payable days, prorate fixed earnings by the payable
+  ratio, resolve fixed and percentage-based components, and compute gross, total
+  deductions, and net.
 - Transaction-safe payroll generation, a payment-status state machine, and audit.
 - Server-side payslips (JSON + PDF rendered with pdfkit) and employee self-service.
 
@@ -101,9 +106,29 @@ re-derives their business rules.
 
 ## Database architecture
 
-13 tables are used by the live application, plus 3 read views consumed by the user and
-dashboard surfaces. There are **no triggers or stored procedures** — all logic lives in
-the service layer.
+14 tables are used by the live application (`user_sessions` included), plus 3 read views
+consumed by the user and dashboard surfaces. The database also carries **3 triggers and
+1 stored procedure**, installed by `npm run init-db` (`schema.sql` + `triggers.sql` +
+`procedures.sql`) and re-verified in order by `npm run setup:demo`:
+
+| Database object | Type | Role |
+|---|---|---|
+| `after_leave_approval` | trigger | Sole writer of `leave_balance.used_days`/`remaining_days` — deducts paid balance on Pending→Approved and restores it on Approved→Cancelled |
+| `before_attendance_insert` | trigger | Maintains `attendance.total_hours` (check-out − check-in) before an insert |
+| `before_attendance_update` | trigger | Recomputes `attendance.total_hours` before an update |
+| `calculate_leave_days` | procedure | Installed but **not called** by the application — Leave duration is computed in JavaScript |
+
+Division of responsibility:
+
+- **Leave** — the service locks and reads the balance, pre-validates availability, and
+  changes the application status inside a transaction; the `after_leave_approval`
+  trigger then performs the paid-leave deduction/restoration exactly once. The service
+  does not update the balance columns directly.
+- **Attendance** — the service computes the authoritative status and the worked/late/
+  early-checkout minute fields; the two attendance triggers only maintain the derived
+  `total_hours` column.
+- The unused `calculate_leave_days` procedure is a passive schema object and is not part
+  of the active request flow.
 
 | Table | Purpose |
 |---|---|
@@ -136,12 +161,30 @@ payroll 1──N payroll_details N──1 salary_components
 
 ## Security
 
-- **Authentication:** JWT required on every module endpoint; unauthenticated requests
-  return `401`.
+- **HTTP perimeter (T-004):** Helmet with a SPA-compatible CSP
+  (`style-src 'unsafe-inline'` for the Vite shell), `frame-ancestors 'none'`,
+  `X-Frame-Options: DENY`, `nosniff`; HSTS off until TLS. A tiered global rate
+  limiter on `/api` (per 60s: 900 authenticated reads / 300 unauthenticated /
+  300 mutations; preflight and health never counted) bounds floods without
+  criminalizing legitimate bursts. `TRUST_PROXY` is validated at boot; an unsafe
+  value refuses to start.
+- **Authentication:** JWT required on protected module endpoints; an unauthenticated
+  request to a protected endpoint returns `401`. Only `POST /api/auth/login` is public;
+  both self-service password-reset steps require a live session, and there is no
+  anonymous forgot-password endpoint keyed on email address. Algorithms are pinned
+  to HS256 (T-005); a session is revocable server-side, capped at 5 active per
+  user, and expires absolutely after 24h (T-002).
+- **Password reset (T-003):** reset codes are stored as SHA-256 digests; the
+  plaintext exists only inside the emailed message; issuance/consumption budgets
+  are DB-backed, audited, and lock out brute-force guessing per account.
 - **Authorization (RBAC):** `authorize(...)` guards role-scoped endpoints. A verified
   Employee is blocked (`403`) from org attendance, org leave, payroll generation,
-  salary components/structures, and **any other employee's** payroll or payslip (IDOR
-  protection confirmed at the JSON and PDF endpoints).
+  salary components/structures (except reading their own structure), and **any other
+  employee's** payroll or payslip (IDOR protection confirmed at the JSON and PDF
+  endpoints).
+- **Credential privacy (T-008):** the create-user response carries delivery
+  metadata (`credentials_emailed` / `email_delivery_status`) and never a password;
+  the temporary credential exists only inside the welcome email.
 - **Server-authoritative calculations:** manual attendance corrections and payroll
   amounts are recomputed by the backend; a client-supplied `status` or salary amount is
   never trusted, so no arbitrary value is persisted.
@@ -157,18 +200,43 @@ payroll 1──N payroll_details N──1 salary_components
 
 ## Testing
 
-Two layers, both run against the real MySQL database (no mocks):
+Three layers. DB-writing suites are guarded (`backend/test/support/dbGuard.js`):
+they refuse protected databases outright and run only against an explicitly
+approved scratch schema (`DB_NAME=workzen_hrms_test ALLOW_SCRATCH_DB=1`).
 
-| Suite | Command | Result |
+| Suite | Command | Latest verified result |
 |---|---|---|
-| Backend unit/integration (`attendance`, `leave`, `salary`, `payroll`, `payslip`) | `npm test` | **109 tests / 25 suites / 0 failed** |
-| HTTP integration (leave, payroll, payroll-generation, payslip, salary) | `npm run test:*:http` | **104 tests / 0 failed** |
-| **Total automated tests** | | **213 / 0 failed** |
+| Backend unit/integration (25 files) | `npm test` (with scratch DB) | **398 tests / 0 failed** |
+| DB-free gate (no database required) | `npm run test:dbfree` | **202 tests / 0 failed** |
+| HTTP integration (13 suites: auth, session, reset, attendance, leave, leave-performance, payroll, payroll-generation, payslip, salary, profile, directory, demo-dataset) | `npm run test:*:http` with `*_API_URL` env vars | **252 tests / 0 failed** |
+| Frontend (Vitest + Testing Library) | `cd frontend && npm test` | **10 tests / 0 failed** |
 
 HTTP suites are env-gated (`LEAVE_API_URL`, `PAYROLL_API_URL`, `PAYSLIP_API_URL`,
-`SALARY_API_URL`) and seed their own isolated temp users so they never drain the demo
-dataset. The Leave HTTP suite snapshots and restores the shared demo balance in
-teardown, so repeated runs are deterministic.
+`PROFILE_API_URL`, `SESSION_API_URL`, `AUTH_API_URL`, `ATTENDANCE_API_URL`,
+`DEMO_DATASET_API_URL`, `DIRECTORY_API_URL`) and use
+different isolation strategies, so they are not all fully isolated from the demo dataset:
+
+- The payroll-generation and salary suites seed their own **temporary users** and
+  hard-delete them in teardown, so they never touch the demo employees.
+- The Leave HTTP suite operates on the **shared** demo employee; it snapshots that
+  employee's `leave_balance` rows before the run and restores them exactly in teardown,
+  so repeated runs are deterministic even though it does not use an isolated user.
+- The payroll decommission suite is read-only (RBAC and deliberate-404 checks) and
+  performs no writes.
+- `test/benchmark-generator.test.js` is pure (no database connection), so `npm test`
+  verifies the dataset planner on any machine.
+- `test/demo-dataset-http.test.js` only reads the generated dataset; its writes are
+  `user_sessions` rows from its own logins/logout and two `PAYSLIP_DOWNLOADED` audit
+  rows from its PDF check. Point it (and the server) at a generated non-production
+  schema via `DB_NAME`.
+
+- The payroll-generation and salary suites seed their own **temporary users** and
+  hard-delete them in teardown, so they never touch the demo employees.
+- The Leave HTTP suite operates on the **shared** demo employee; it snapshots that
+  employee's `leave_balance` rows before the run and restores them exactly in teardown,
+  so repeated runs are deterministic even though it does not use an isolated user.
+- The payroll decommission suite is read-only (RBAC and deliberate-404 checks) and
+  performs no writes.
 
 ---
 
@@ -176,6 +244,13 @@ teardown, so repeated runs are deterministic.
 
 Measured against a dedicated 1,000-employee benchmark dataset (109,151 attendance
 rows, 12,300 leave applications, 10,150 payroll records, 30,450 payroll line items).
+Those percentiles predate the reproducible generator; the same dataset shape is now
+rebuilt by `npm run setup:demo` at 221,000 synthetic attendance rows, and single-request
+timings re-measured on it (localhost, one sample each, not percentiles) stayed in the
+same order: `GET /attendance/my-logs` 6 ms, `GET /leave/balance` 4 ms,
+`GET /payroll/my-payroll` 6 ms, `GET /payroll/payslip/:id` 7 ms, its PDF 20 ms,
+`GET /attendance/day` over 1,001 employees 20-27 ms with search/status/department
+filters, and `GET /leave/requests` 56 ms.
 Read endpoints: 300 requests at concurrency 10; write endpoints: 150 distinct-entity
 requests at concurrency 5. **All endpoints returned a 0.0% error rate.** Percentiles
 below are aggregated across those request counts, not single calls.
@@ -195,12 +270,14 @@ below are aggregated across those request counts, not single calls.
 | `POST /payroll/generate` | 39.6 | 46.4 | 52.1 |
 
 **Known non-critical scalability limits.** The two unfiltered org-list reads are heavy
-by design: `GET /payroll/all` with no period filter streams all ~10k rows (p50 ≈ 1.5s),
-and `GET /attendance/all` with no filters full-joins ~109k rows (p50 ≈ 1.8s) with a
-`Using temporary; Using filesort`. Both are mitigated in real use by the existing
-server-side filters/pagination (the filtered attendance path is ~92ms p95); a
-month/year-leading index on `payroll` would help the unfiltered browse but is not added
-because it is not justified by actual filtered query behavior.
+by design: `GET /payroll/all` with no period filter has no pagination and streams all
+10,160 rows (5.6 MB JSON, measured 272 ms on the 221,000-row dataset), and
+`GET /attendance/all` with no filters counts and joins all 221,218 attendance rows
+(measured 1,218 ms, `Using temporary; Using filesort`) before returning one page. Both
+are mitigated in real use by the existing server-side filters/pagination — a filtered
+day read over 1,001 employees is ~20-27 ms and `GET /payroll/all?month=&year=` for one
+period is ~32 ms; a month/year-leading index on `payroll` would help the unfiltered
+browse but is not added because it is not justified by actual filtered query behavior.
 
 ### Query plans (EXPLAIN highlights)
 
@@ -215,6 +292,19 @@ Every hot path seeks an index; no new index was warranted.
 
 ---
 
+## Business-rule scope & limitations
+
+Documented, intentional boundaries of the current implementation:
+
+- **Leave** counts weekdays only (Saturday and Sunday excluded); public holidays are
+  not modeled, and partial-day leave is not supported.
+- **Payroll** working-day counts exclude weekends and use no holiday calendar; payable
+  days are derived from frozen attendance and paid-leave data.
+- The `calculate_leave_days` stored procedure is installed but **unused** — Leave
+  duration is computed in the service layer.
+
+---
+
 ## Setup
 
 ### Prerequisites
@@ -224,16 +314,51 @@ Every hot path seeks an index; no new index was warranted.
 
 ### Backend
 
+One command gives a new developer a fully working, populated environment:
+
 ```bash
 cd backend
 npm install
 cp .env.example .env        # set DB_* and JWT_SECRET
-npm run init-db
-npm run migrate:attendance
-npm run migrate:leave-cancellation
-npm run migrate:salary-components
-npm run seed:demo
+npm run setup:demo          # schema -> migrations -> demo accounts -> dataset -> verify
 npm run dev                 # http://localhost:5000
+```
+
+`npm run setup:demo` runs five ordered stages and prints each one:
+
+1. **Schema initialization** — `schema.sql` + `procedures.sql` + `triggers.sql`, with any
+   `CREATE DATABASE`/`USE` binding stripped so the target schema comes from `DB_NAME`
+   (or `--database=`).
+2. **Migrations in dependency order** — `attendance` derived columns +
+   `unique_user_attendance_date` → `salary_components.calculation_type` →
+   `user_sessions` → the updated `after_leave_approval` (leave-cancellation) trigger.
+   Each step checks `INFORMATION_SCHEMA` first, so reruns are no-ops and the same
+   migration can also be run standalone via `npm run migrate:*`.
+3. **Demo account seeding** — skipped when the four `@workzen.demo` accounts already
+   exist; use `--reseed-demo-users` to refresh their passwords explicitly.
+4. **Benchmark dataset generation** — the deterministic synthetic population described
+   under *Reproducible demo & benchmark dataset* (skippable with `--skip-generate`).
+5. **Post-seed integrity verification** — 22 referential, uniqueness, business-rule and
+   arithmetic checks; the command exits non-zero if any check fails.
+
+Setup never drops a schema and never reseeds blindly: on an already-populated database
+it reports `already initialized; setup will not drop or reseed data`, skips existing
+employees, and only re-verifies. `npm run init-db` remains available as the schema-only
+step, but `npm run setup:demo` is the command to use for a working environment.
+
+`init-db` is enough for the API to authenticate: `schema.sql` includes `user_sessions`,
+the session registry that `protect` validates every JWT against and fails closed without.
+A database created before that table existed must run `npm run migrate:user-sessions` once,
+otherwise every authenticated request returns 500.
+
+Useful flags: `--database=<schema>` (dedicated non-production schema), `--dry-run`
+(plan only, no writes), `--employees`, `--months`, `--leave-applications`, `--seed`,
+`--skip-generate`, `--force-reseed-benchmark --yes` (deletes only `%@workzen.test`
+rows). The generator refuses to run with `NODE_ENV=production`.
+
+```bash
+npm run verify:demo -- --database=workzen_hrms   # re-run stage 5 on its own
+npm run generate:benchmark -- --dry-run          # planned volumes, no writes
 ```
 
 ### Frontend
@@ -257,6 +382,67 @@ PAYROLL_API_URL=http://localhost:5000/api npm run test:payroll:http
 
 ---
 
+## Reproducible demo & benchmark dataset
+
+`npm run setup:demo` builds one self-consistent population, deterministic from
+`--seed` (default `20261001`): the same seed always produces the same identities, leave
+windows, attendance timestamps and payroll snapshots.
+
+| Dataset | Count | Notes |
+|---|---:|---|
+| Synthetic employees | 1,000 | `emp0001@workzen.test` … `emp1000@workzen.test`, codes `WZ-SYN-0001`… |
+| Attendance rows (synthetic) | 221,000 | 850 employees × 218 weekdays + 150 senior employees × 238 |
+| Leave applications | 12,300 | 13 for the first 300 employees, 12 for the rest |
+| Payroll records | 10,150 | 11 periods for the senior cohort, 10 for the rest |
+| Payroll component snapshots | 30,450 | exactly 3 components per payroll record |
+| `leave_balance` rows | 12,000 | per employee × leave type × calendar year |
+| Demo-employee coverage | 218 + 13 + 10 + 30 | `employee@workzen.demo` gets the same calendar, so `attendance` holds 221,218 rows |
+
+**Attendance volume.** The original brief estimated ~217,000 attendance rows. The real
+number follows from the approved payroll window (Dec-2025 … Sep-2026) and the
+weekday-only rule, so it is calculated rather than padded: Dec-2025 … Sep-2026 contains
+218 Mon–Fri dates and Nov-2025 (the senior cohort's extra month) contains 20, giving
+`850 × 218 + 150 × 238 = 221,000`. Manufacturing 4,000 extra rows would have meant
+duplicate user/date pairs, weekend dates or unsupported periods, all of which the
+business rules forbid.
+
+**Business rules are the generator's own code**, not re-implemented: attendance rows are
+driven through `calculateAttendanceMetrics()` (Asia/Kolkata, 09:00–18:00, 15-minute
+grace, 240-minute half day), payroll through `countWorkingDays()`,
+`attendancePayableDays()`, `paidLeaveDaysForPeriod()` and `calculatePayroll()`, and paid
+leave through the real `Pending → Approved → Cancelled` transitions so
+`after_leave_approval` deducts and restores balances exactly as the application does.
+Bulk writes are batched (one transaction per employee) instead of calling
+`generatePayroll()` 10,150 times; a spread sample of 21 snapshots is re-verified
+against the live calculation path in `test/demo-dataset-http.test.js`.
+
+Consequences enforced and verified: no negative net salary (minimum observed net
+₹24,627.28), no weekend or duplicate attendance, no overlapping leave windows, no paid
+leave beyond the annual allocation, payroll snapshots that agree with their component
+rows, only supported periods, and **no bulk `audit_logs` rows** (the generator writes
+none; only live API actions audit).
+
+Existing demo users, manually created records and any non-`@workzen.test` data are
+preserved. Generation is resumable: an interrupted run leaves no half-created employee
+(each employee is one transaction), and the next run skips the reserved emails that
+already exist.
+
+### Verification
+
+```bash
+cd backend
+DB_NAME=workzen_hrms_fresh PORT=5062 node server.js &
+DEMO_DATASET_API_URL=http://localhost:5062/api DB_NAME=workzen_hrms_fresh npm run test:demo-dataset:http
+```
+
+The suite proves synthetic + demo logins, HIGH-3 session revocation, employee
+self-service (attendance history, leave balance/my-leaves, payroll list, payslip JSON +
+PDF), RBAC and IDOR denial for HR/payroll surfaces, HR org lists with search/status/
+department filters over 1,001 employees, the live-payroll-sample recomputation, and the
+exact volumes above.
+
+---
+
 ## Demo accounts
 
 Local development only — never use in production.
@@ -267,6 +453,12 @@ Local development only — never use in production.
 | HR Officer | `hr@workzen.demo` | `Hr@123` |
 | Payroll Officer | `payroll@workzen.demo` | `Payroll@123` |
 | Employee | `employee@workzen.demo` | `Employee@123` |
+| Synthetic benchmark employee | `emp0001@workzen.test` … `emp1000@workzen.test` | `Benchmark@123` |
+
+Synthetic identities are fabricated (names, phones and addresses come from generator
+pools) and live on the reserved `.test` domain, which is never routable and marks them
+as benchmark-owned data that `--force-reseed-benchmark` may delete.
+
 
 ---
 
@@ -290,7 +482,8 @@ Local development only — never use in production.
 
 - Single server-authoritative payroll engine; no duplicated calculation paths.
 - Effective-dated salary model with overlap protection and as-of resolution.
-- Transaction-safe payroll generation, paid-leave balance mutation, and manual
+- Transaction-safe payroll generation, paid-leave approval/cancellation (whose balance
+  effect is applied by the `after_leave_approval` trigger), and manual
   attendance corrections — each paired with an `audit_logs` entry.
 - Server-rendered payslip PDFs; the client downloads a blob, never re-renders payroll.
 - Defense-in-depth RBAC with verified IDOR protection on payroll and payslip reads.

@@ -372,8 +372,8 @@ describe("Attendance HTTP API", () => {
     const matrix = (deleteTargetId) => [
       ["/attendance/all-status", ["Admin", "HR Officer", "Payroll Officer"]],
       [`/attendance/day?date=${DAY_A}`, ["Admin", "HR Officer", "Payroll Officer"]],
-      ["/attendance/all", ["Admin", "HR Officer"]],
-      ["/attendance/export", ["Admin", "HR Officer"]],
+      ["/attendance/all", ["Admin", "HR Officer", "Payroll Officer"]],
+      ["/attendance/export", ["Admin", "HR Officer", "Payroll Officer"]],
       [`/attendance/payable-days?userId=${employeeA.userId}&month=12&year=2026`,
         ["Admin", "HR Officer", "Payroll Officer"]],
       [`PUT /attendance/${fixtureId}`, ["Admin", "HR Officer"]],

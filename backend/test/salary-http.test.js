@@ -280,10 +280,12 @@ describe("Salary structure HTTP integration", () => {
       assert.ok(!afterDel.body.data.components.some((c) => c.component_id === pctComponentId));
     });
 
-    it("forbids employees from reading or mutating salary structures", async () => {
+    it("forbids employees from mutating salary structures and from reading others'", async () => {
+      // T-011: an Employee may read their OWN structure; the self-read is
+      // authorized now, so it must succeed. Everything else stays forbidden.
       assert.equal(
         (await call("GET", `/payroll/salary-structure/${employeeUserId}`, employeeToken)).status,
-        403,
+        200,
       );
       assert.equal(
         (await call("POST", `/payroll/salary-structure/${employeeUserId}`, employeeToken, {
