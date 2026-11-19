@@ -288,15 +288,66 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 CREATE TABLE IF NOT EXISTS password_reset_codes (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
-    reset_code VARCHAR(6) NOT NULL,
+    reset_code VARCHAR(64) NOT NULL COMMENT 'SHA-256 hex digest of the emailed 6-digit code (T-003)',
     is_used BOOLEAN DEFAULT FALSE,
     expires_at DATETIME NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
     INDEX idx_user_id (user_id),
-    INDEX idx_reset_code (reset_code),
+    INDEX idx_user_reset_code (user_id, reset_code),
     INDEX idx_expires_at (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =====================================================
+-- 14. USER SESSIONS TABLE
+-- =====================================================
+-- Every issued JWT is bound to one row here, and `protect` reads this table on
+-- every request and fails closed when it cannot. The table is therefore part of
+-- the base schema, not only of `npm run migrate:user-sessions`, which exists for
+-- databases created before it was added here.
+CREATE TABLE IF NOT EXISTS user_sessions (
+    session_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    issued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    revoked_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    INDEX idx_user_id (user_id),
+    INDEX idx_revoked_at (revoked_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =====================================================
+-- 15. AUTH THROTTLE TABLE
+-- =====================================================
+-- Login throttling counters, one row per bucket. A bucket is a namespace prefix
+-- plus a keyed digest of the identity being protected: `acct:fail:<digest>`
+-- counts failed credentials, `acct:req:<digest>` and `ip:req:<digest>` count
+-- requests. The separate namespaces are what keep the two budgets independent, so
+-- a request that is refused before bcrypt never becomes a lockout and a successful
+-- login only clears the failure bucket.
+--
+-- The digest, not the email, is the key: an attacker trying arbitrary addresses
+-- cannot grow the table past the number of distinct buckets, and no account data
+-- is copied into a table that is periodically swept.
+--
+-- Deliberately has no foreign key to `users`. Locking a throttle row must never
+-- take a lock on a user row, and a lockout must survive an account rename or
+-- deletion. `window_start` anchors the fixed window the model resets,
+-- `last_attempt_at` is the idle marker the retention sweep reads so the table
+-- stays bounded, and `locked_until` is the lockout itself: it lives in the
+-- database, so restarting the app or running a second process cannot clear it.
+-- Like `user_sessions`, this is base schema rather than migration-only, because
+-- login reads it on every attempt and must not fail closed on a fresh clone.
+CREATE TABLE IF NOT EXISTS auth_throttle (
+    bucket VARBINARY(96) NOT NULL,
+    window_start TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    attempts INT UNSIGNED NOT NULL DEFAULT 0,
+    locked_until TIMESTAMP NULL DEFAULT NULL,
+    last_attempt_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (bucket),
+    INDEX idx_last_attempt (last_attempt_at),
+    INDEX idx_locked_until (locked_until)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 
 -- =====================================================
 -- VIEWS FOR EASY QUERYING

@@ -17,7 +17,13 @@ import pool from "../src/config/database.js";
 // everything. Does not touch the shared demo accounts' payroll data.
 // =====================================================
 
-const base = process.env.PAYSLIP_API_URL;
+import { requiredBaseUrl, guardExecutedTests } from "./support/httpSuite.js";
+import { assertScratchDatabase } from "./support/dbGuard.js";
+const base = requiredBaseUrl("PAYSLIP_API_URL", "test:payslip:http");
+// T-007 tripwire: the target server writes to the database; the schema it
+// points at must be an approved scratch one. Fails closed before any test
+// registers.
+assertScratchDatabase("payslip-http");
 
 const PERIOD_YEAR = 2026;
 const PERIOD_MONTH = 10;
@@ -84,7 +90,7 @@ const makeEmployee = async (tag) => {
   return { userId, token };
 };
 
-describe("Payslip HTTP integration", { skip: !base }, () => {
+describe("Payslip HTTP integration", () => {
   before(async () => {
     adminToken = await login("admin@workzen.demo", "Admin@123");
     payrollToken = await login("payroll@workzen.demo", "Payroll@123");
@@ -292,3 +298,5 @@ describe("Payslip HTTP integration", { skip: !base }, () => {
     });
   });
 });
+
+guardExecutedTests("PAYSLIP_API_URL", 18);

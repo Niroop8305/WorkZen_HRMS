@@ -6,7 +6,13 @@ import { before, describe, it } from 'node:test';
 // (b) every retired legacy route now returns a deliberate 404 from the app-level
 // handler instead of a 500 from a missing legacy table.
 // Read-only: performs no payroll generation and no database writes.
-const base = process.env.PAYROLL_API_URL;
+import { requiredBaseUrl, guardExecutedTests } from "./support/httpSuite.js";
+import { assertScratchDatabase } from "./support/dbGuard.js";
+const base = requiredBaseUrl("PAYROLL_API_URL", "test:payroll:http");
+// T-007 tripwire: the target server writes to the database; the schema it
+// points at must be an approved scratch one. Fails closed before any test
+// registers.
+assertScratchDatabase("payroll-http");
 
 let employeeToken, hrToken, adminToken, payrollToken;
 
@@ -33,7 +39,7 @@ const login = async (email, password) => {
   return body?.data?.token;
 };
 
-describe('Payroll decommission HTTP regression', { skip: !base }, () => {
+describe('Payroll decommission HTTP regression', () => {
   before(async () => {
     employeeToken = await login('employee@workzen.demo', 'Employee@123');
     hrToken = await login('hr@workzen.demo', 'Hr@123');
@@ -115,3 +121,5 @@ describe('Payroll decommission HTTP regression', { skip: !base }, () => {
     }
   });
 });
+
+guardExecutedTests("PAYROLL_API_URL", 9);

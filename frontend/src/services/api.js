@@ -1,6 +1,10 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Same-origin by default: `vite dev` proxies /api to the backend, and a built
+// bundle served behind a reverse proxy keeps working. An absolute localhost URL
+// used to be the fallback, which baked the developer's machine into dist/.
+// Set VITE_API_URL to point the client at a separately hosted API.
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Create axios instance
 const api = axios.create({
@@ -28,7 +32,16 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+    const attemptedLogin = (error.config?.url || '').includes('/auth/login');
+    const attemptedLogout = (error.config?.url || '').includes('/auth/logout');
+
+    // A 401 from the login request itself is a wrong password, not an expired
+    // session; redirecting here would discard the message the backend returned.
+    // A 401 from logout means the session was already revoked or expired, which
+    // is the outcome logout was trying to achieve; reloading would preempt the
+    // SPA redirect and race the state cleanup in AuthContext.
+    if (status === 401 && !attemptedLogin && !attemptedLogout) {
       localStorage.removeItem('workzen_token');
       localStorage.removeItem('workzen_user');
       window.location.href = '/login';

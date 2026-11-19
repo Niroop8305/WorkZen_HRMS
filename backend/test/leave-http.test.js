@@ -2,7 +2,13 @@ import assert from 'node:assert/strict';
 import { after, before, describe, it } from 'node:test';
 import pool from '../src/config/database.js';
 
-const base = process.env.LEAVE_API_URL;
+import { requiredBaseUrl, guardExecutedTests } from "./support/httpSuite.js";
+import { assertScratchDatabase } from "./support/dbGuard.js";
+const base = requiredBaseUrl("LEAVE_API_URL", "test:leave:http");
+// T-007 tripwire: the target server writes to the database; the schema it
+// points at must be an approved scratch one. Fails closed before any test
+// registers.
+assertScratchDatabase("leave-http");
 let employeeToken, hrToken, adminToken, payrollToken;
 let employeeId, hrId;
 let createdIds = [];
@@ -24,7 +30,7 @@ const call = async (path, options = {}) => {
 const authHeaders = (token) => ({ Authorization: `Bearer ${token}` });
 const jsonHeaders = (token) => ({ ...authHeaders(token), 'Content-Type': 'application/json' });
 
-describe('Leave Management HTTP API', { skip: !base }, () => {
+describe('Leave Management HTTP API', () => {
   before(async () => {
     // Login Employee
     let res = await call('/auth/login', {
@@ -441,3 +447,5 @@ describe('Leave Management HTTP API', { skip: !base }, () => {
     });
   });
 });
+
+guardExecutedTests("LEAVE_API_URL", 36);

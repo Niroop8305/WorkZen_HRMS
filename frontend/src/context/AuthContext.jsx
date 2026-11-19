@@ -60,11 +60,23 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('workzen_token');
-    localStorage.removeItem('workzen_user');
-    setUser(null);
-    authService.logout().catch(() => {});
+  // Order is load-bearing. The axios request interceptor reads the bearer token
+  // out of localStorage when it builds the request, so clearing the token first
+  // dispatches an unauthenticated logout that `protect` rejects with 401 and the
+  // database session quietly stays live. Awaiting here is what makes server-side
+  // revocation actually happen.
+  const logout = async () => {
+    try {
+      await authService.logout();
+    } catch {
+      // A rejected logout is still a logout for the client: the session was
+      // already revoked or expired (401), or the request never landed. Local
+      // credentials must not survive either way.
+    } finally {
+      localStorage.removeItem('workzen_token');
+      localStorage.removeItem('workzen_user');
+      setUser(null);
+    }
   };
 
   const value = {

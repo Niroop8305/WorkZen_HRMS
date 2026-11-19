@@ -1,3 +1,10 @@
+import { assertScratchDatabase } from "./support/dbGuard.js";
+
+// T-007 tripwire: this suite writes to the database; it must never run
+// against a protected application schema. Fails closed before any test
+// registers.
+assertScratchDatabase("payroll");
+
 import assert from "node:assert/strict";
 import { after, before, describe, it } from "node:test";
 import pool from "../src/config/database.js";

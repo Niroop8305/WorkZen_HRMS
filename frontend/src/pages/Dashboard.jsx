@@ -7,6 +7,8 @@ import EmployeeDetailsModal from "../components/EmployeeDetailsModal";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 
+const EMPLOYEES_PAGE_SIZE = 24;
+
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -17,6 +19,7 @@ const Dashboard = () => {
   const [showEmployeeDetails, setShowEmployeeDetails] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [employees, setEmployees] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [attendanceStatus, setAttendanceStatus] = useState("not_checked_in");
   const [attendanceData, setAttendanceData] = useState(null);
@@ -24,8 +27,8 @@ const Dashboard = () => {
   const [activeLeaves, setActiveLeaves] = useState({});
   const profileMenuRef = useRef(null);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate("/login");
   };
 
@@ -290,6 +293,25 @@ const Dashboard = () => {
     }
   };
 
+  const query = searchQuery.trim().toLowerCase();
+  const filteredEmployees = query
+    ? employees.filter((employee) =>
+        [employee.full_name, employee.email, employee.employee_code]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(query))
+      )
+    : employees;
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredEmployees.length / EMPLOYEES_PAGE_SIZE)
+  );
+  // A filter change can leave the stored page past the end of the new list.
+  const page = Math.min(currentPage, totalPages);
+  const visibleEmployees = filteredEmployees.slice(
+    (page - 1) * EMPLOYEES_PAGE_SIZE,
+    page * EMPLOYEES_PAGE_SIZE
+  );
+
   return (
     <div className="dashboard-layout">
       {/* Left Sidebar Navigation */}
@@ -314,7 +336,10 @@ const Dashboard = () => {
             className="search-input"
             placeholder="Search"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
           />
           <div className="header-right">
             <button
@@ -356,10 +381,12 @@ const Dashboard = () => {
         <div className="employee-grid">
           {loading ? (
             <div className="loading-message">Loading employees...</div>
-          ) : employees.length === 0 ? (
-            <div className="no-data-message">No employees found</div>
+          ) : filteredEmployees.length === 0 ? (
+            <div className="no-data-message">
+              {query ? "No employees match this search" : "No employees found"}
+            </div>
           ) : (
-            employees.map((employee) => (
+            visibleEmployees.map((employee) => (
               <div
                 key={employee.user_id}
                 className="employee-card"
@@ -393,6 +420,29 @@ const Dashboard = () => {
             ))
           )}
         </div>
+
+        {!loading && totalPages > 1 && (
+          <div className="employee-pagination">
+            <button
+              type="button"
+              disabled={page <= 1}
+              onClick={() => setCurrentPage(page - 1)}
+            >
+              Previous
+            </button>
+            <span>
+              Page {page} of {totalPages} ({filteredEmployees.length}{" "}
+              {query ? "matching" : "employees"})
+            </span>
+            <button
+              type="button"
+              disabled={page >= totalPages}
+              onClick={() => setCurrentPage(page + 1)}
+            >
+              Next
+            </button>
+          </div>
+        )}
 
         {/* Create User Modal */}
         <CreateUserModal

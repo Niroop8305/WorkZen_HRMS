@@ -7,7 +7,13 @@ import pool from "../src/config/database.js";
 // live JWT auth and RBAC. Gated on PAYROLL_API_URL so it is skipped unless a
 // server is running. Created components/structures are hard-deleted afterwards
 // to leave the demo database pristine.
-const base = process.env.PAYROLL_API_URL;
+import { requiredBaseUrl, guardExecutedTests } from "./support/httpSuite.js";
+import { assertScratchDatabase } from "./support/dbGuard.js";
+const base = requiredBaseUrl("PAYROLL_API_URL", "test:salary:http");
+// T-007 tripwire: the target server writes to the database; the schema it
+// points at must be an approved scratch one. Fails closed before any test
+// registers.
+assertScratchDatabase("salary-http");
 
 let adminToken, payrollToken, hrToken, employeeToken, employeeUserId;
 const stamp = Date.now();
@@ -37,7 +43,7 @@ const login = async (email, password) => {
   return { token: body?.data?.token, userId: body?.data?.userId };
 };
 
-describe("Salary structure HTTP integration", { skip: !base }, () => {
+describe("Salary structure HTTP integration", () => {
   let fixedComponentId, pctComponentId, v1Id, pctStructId;
 
   before(async () => {
@@ -345,3 +351,5 @@ describe("Salary structure HTTP integration", { skip: !base }, () => {
     });
   });
 });
+
+guardExecutedTests("PAYROLL_API_URL", 10);

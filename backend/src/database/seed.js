@@ -3,6 +3,7 @@ import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { resetAccountScopedState } from './seedCleanup.js';
 
 dotenv.config();
 
@@ -88,15 +89,35 @@ async function seedDatabase() {
     console.log('🧹 Clearing existing data...');
     await connection.query('SET FOREIGN_KEY_CHECKS = 0');
     await connection.query('TRUNCATE TABLE password_reset_codes');
-    await connection.query('TRUNCATE TABLE audit_logs');
+    // audit_logs is demo history EXCEPT for the two password-reset throttle
+    // actions: the per-account guessing budget is counted from those rows, so
+    // wiping them would silently re-arm code guessing. They are kept, and the
+    // rest is deleted. (test/password-reset.test.js locks this against the action
+    // names the throttle actually uses.)
+    const [[throttleRows]] = await connection.query(
+      "SELECT COUNT(*) AS preserved FROM audit_logs WHERE action IN ('PASSWORD_RESET_CODE_ISSUED', 'PASSWORD_RESET_CODE_INVALID')"
+    );
+    await connection.query(
+      "DELETE FROM audit_logs WHERE action NOT IN ('PASSWORD_RESET_CODE_ISSUED', 'PASSWORD_RESET_CODE_INVALID')"
+    );
+    console.log(
+      `   preserved ${throttleRows.preserved} reset-throttle audit rows (guessing budget)`
+    );
     await connection.query('TRUNCATE TABLE payroll_details');
     await connection.query('TRUNCATE TABLE payroll');
     await connection.query('TRUNCATE TABLE employee_salary_structure');
-    await connection.query('TRUNCATE TABLE salary_components');
+    // salary_components is deliberately NOT truncated: schema.sql seeds the nine
+    // reference components and nothing re-inserts them, so wiping them here used
+    // to silently destroy the payroll vocabulary (T-006). The structure
+    // assignment below looks components up by name from that reference set.
     await connection.query('TRUNCATE TABLE leave_applications');
     await connection.query('TRUNCATE TABLE leave_balance');
     await connection.query('TRUNCATE TABLE attendance');
     await connection.query('TRUNCATE TABLE employee_profiles');
+    // Sessions and live lockouts are handled by the shared reset helper: TRUNCATE
+    // users does not cascade, so a surviving session row would be re-keyed onto
+    // whoever holds that user_id afterwards.
+    await resetAccountScopedState(connection);
     await connection.query('TRUNCATE TABLE users');
     // We don't truncate roles or leave_types as they are static enum-like tables, 
     // but we can ensure they exist.

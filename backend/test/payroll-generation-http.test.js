@@ -13,7 +13,13 @@ import pool from "../src/config/database.js";
 // 2026, then hard-deletes everything afterwards. It deliberately does NOT touch
 // the shared demo accounts so it can run concurrently with the salary-structure
 // HTTP suite without cross-test interference.
-const base = process.env.PAYROLL_API_URL;
+import { requiredBaseUrl, guardExecutedTests } from "./support/httpSuite.js";
+import { assertScratchDatabase } from "./support/dbGuard.js";
+const base = requiredBaseUrl("PAYROLL_API_URL", "test:payroll:generate:http");
+// T-007 tripwire: the target server writes to the database; the schema it
+// points at must be an approved scratch one. Fails closed before any test
+// registers.
+assertScratchDatabase("payroll-generation-http");
 
 const PERIOD_YEAR = 2026;
 const PERIOD_MONTH = 11;
@@ -63,7 +69,7 @@ const weekdayDates = (year, month) => {
   return out;
 };
 
-describe("Payroll generation/status HTTP integration", { skip: !base }, () => {
+describe("Payroll generation/status HTTP integration", () => {
   let expectedWorkingDays;
 
   before(async () => {
@@ -350,3 +356,5 @@ describe("Payroll generation/status HTTP integration", { skip: !base }, () => {
     });
   });
 });
+
+guardExecutedTests("PAYROLL_API_URL", 22);

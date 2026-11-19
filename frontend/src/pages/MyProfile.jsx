@@ -43,7 +43,7 @@ const MyProfile = () => {
     confirmPassword: "",
   });
   const [showResetForm, setShowResetForm] = useState(false);
-  const [resetCodeSent, setResetCodeSent] = useState(false);
+  const [resetCodeMailed, setResetCodeMailed] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
   const [resetErrors, setResetErrors] = useState({});
   const [resetSuccess, setResetSuccess] = useState("");
@@ -126,8 +126,8 @@ const MyProfile = () => {
     }
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate("/login");
   };
 
@@ -328,8 +328,9 @@ const MyProfile = () => {
       setPasswordErrors({});
 
       setPasswordSuccess(
-        response.data.message ||
-          "Password updated successfully! A confirmation email has been sent."
+        // The API already names the mail outcome; this fallback must not claim a
+        // confirmation email that never left the process.
+        response.data.message || "Password updated successfully."
       );
 
       // Clear form
@@ -360,10 +361,10 @@ const MyProfile = () => {
     try {
       const response = await api.post("/auth/request-reset-code");
 
-      setResetSuccess(
-        response.data.message || "Verification code sent to your email!"
-      );
-      setResetCodeSent(true);
+      // Only the API knows whether the code was mailed or merely issued, so the
+      // UI repeats its answer instead of promising an inbox of its own.
+      setResetCodeMailed(response.data.emailSent === true);
+      setResetSuccess(response.data.message || "Verification code requested.");
       setShowResetForm(true);
 
       // Clear reset form
@@ -433,7 +434,7 @@ const MyProfile = () => {
         confirmPassword: "",
       });
       setShowResetForm(false);
-      setResetCodeSent(false);
+      setResetCodeMailed(false);
     } catch (error) {
       console.error("Error resetting password:", error);
       setResetErrors({
@@ -1205,8 +1206,10 @@ const MyProfile = () => {
               <div className="reset-with-code-section">
                 <h4>🔐 Reset Password</h4>
                 <p className="section-description">
-                  Click "Reset Password" to receive a verification code via
-                  email. Enter the code to reset your password securely.
+                  Click "Reset Password" to request a 6-digit verification code
+                  for your account, then enter it to reset your password
+                  securely. The result message tells you whether the code was
+                  emailed.
                 </p>
 
                 {/* Reset Success Message */}
@@ -1232,11 +1235,10 @@ const MyProfile = () => {
                       onClick={handleRequestResetCode}
                       disabled={resetLoading}
                     >
-                      {resetLoading ? "Sending..." : "🔒 Reset Password"}
+                      {resetLoading ? "Requesting..." : "🔒 Reset Password"}
                     </button>
                     <p className="reset-hint">
-                      You'll receive a 6-digit verification code in your email
-                      (valid for 10 minutes)
+                      The code is valid for 10 minutes and can be used once
                     </p>
                   </div>
                 ) : (
@@ -1258,8 +1260,9 @@ const MyProfile = () => {
                         <p className="field-error">{resetErrors.resetCode}</p>
                       )}
                       <p className="field-hint">
-                        Check your email for the verification code (expires in
-                        10 minutes)
+                        {resetCodeMailed
+                          ? "Check your email for the verification code (expires in 10 minutes)"
+                          : "Mail delivery is disabled in this environment, so no code was emailed"}
                       </p>
                     </div>
 
@@ -1315,7 +1318,7 @@ const MyProfile = () => {
                         className="btn btn-secondary"
                         onClick={() => {
                           setShowResetForm(false);
-                          setResetCodeSent(false);
+                          setResetCodeMailed(false);
                           setResetForm({
                             resetCode: "",
                             newPassword: "",
