@@ -8,7 +8,11 @@ import {
   getAttendanceByDay as getAttendanceByDayRecords,
   updateAttendance as updateAttendanceRecord,
 } from "../services/attendanceService.js";
-import { getBusinessNow } from "../config/attendance.js";
+import {
+  getBusinessNow,
+  parseSqlDateTime,
+  formatAttendanceDateTime,
+} from "../config/attendance.js";
 
 // Mark attendance (Check-in/Check-out)
 export const markAttendance = async (req, res) => {
@@ -24,13 +28,32 @@ export const markAttendance = async (req, res) => {
       });
     }
 
-    // Calculate total hours if both check-in and check-out are provided
+    // check_in_time/check_out_time arrive as clock times (HH:mm or HH:mm:ss)
+    // but the columns are DATETIME, so they must be paired with attendance_date
+    // before MySQL sees them. Validating here keeps a malformed payload a 400
+    // instead of a driver error surfacing as a 500.
+    let checkInAt;
+    let checkOutAt;
     let totalHours = null;
-    if (check_in_time && check_out_time) {
-      const checkIn = new Date(`2000-01-01 ${check_in_time}`);
-      const checkOut = new Date(`2000-01-01 ${check_out_time}`);
-      const diffMs = checkOut - checkIn;
-      totalHours = (diffMs / (1000 * 60 * 60)).toFixed(2);
+    try {
+      checkInAt = formatAttendanceDateTime(attendance_date, check_in_time);
+      checkOutAt = formatAttendanceDateTime(attendance_date, check_out_time);
+
+      if (checkInAt && checkOutAt) {
+        const checkIn = parseSqlDateTime(checkInAt);
+        const checkOut = parseSqlDateTime(checkOutAt);
+        if (checkOut.epochMinutes < checkIn.epochMinutes) {
+          throw new Error("check_out_time cannot be earlier than check_in_time");
+        }
+        totalHours = (
+          (checkOut.epochMinutes - checkIn.epochMinutes) / 60
+        ).toFixed(2);
+      }
+    } catch (validationError) {
+      return res.status(400).json({
+        success: false,
+        message: validationError.message,
+      });
     }
 
     const [result] = await pool.query(
@@ -43,8 +66,8 @@ export const markAttendance = async (req, res) => {
       [
         userId,
         attendance_date,
-        check_in_time,
-        check_out_time,
+        checkInAt,
+        checkOutAt,
         totalHours,
         status || "Present",
       ]
@@ -56,8 +79,8 @@ export const markAttendance = async (req, res) => {
       data: {
         userId,
         attendance_date,
-        check_in_time,
-        check_out_time,
+        check_in_time: checkInAt,
+        check_out_time: checkOutAt,
         total_hours: totalHours,
         status: status || "Present",
       },
@@ -67,7 +90,6 @@ export const markAttendance = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error marking attendance",
-      error: error.message,
     });
   }
 };
@@ -151,6 +173,23 @@ export const exportAttendance = async (req, res) => {
     res.setHeader("Content-Disposition", "attachment; filename=attendance.csv");
     res.write(`${headers.map(escapeCsv).join(",")}\n`);
 
+    // D-18: a client that walks away mid-stream (closed tab, cancelled
+    // download) fires neither 'end' nor stream 'error' reliably. 'close' is
+    // the one signal that always arrives, so the pooled connection is released
+    // there too - guarded so it can only be released once.
+    let released = false;
+    const releaseOnce = () => {
+      if (released) return;
+      released = true;
+      exportStream.release();
+    };
+    res.on("close", () => {
+      if (!res.writableEnded) {
+        exportStream.stream.destroy();
+        releaseOnce();
+      }
+    });
+
     exportStream.stream.on("data", (row) => {
       res.write(
         `${[
@@ -169,11 +208,11 @@ export const exportAttendance = async (req, res) => {
       );
     });
     exportStream.stream.on("end", () => {
-      exportStream.release();
+      releaseOnce();
       res.end();
     });
     exportStream.stream.on("error", (error) => {
-      exportStream.release();
+      releaseOnce();
       console.error("Error streaming attendance export:", error);
       if (!res.headersSent) {
         res.status(500).json({ success: false, message: "Error exporting attendance records" });
@@ -241,7 +280,6 @@ export const getMonthlySummary = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error fetching attendance summary",
-      error: error.message,
     });
   }
 };
@@ -310,7 +348,6 @@ export const getPayableDays = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error calculating payable days",
-      error: error.message,
     });
   }
 };
@@ -365,7 +402,6 @@ export const deleteAttendance = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error deleting attendance",
-      error: error.message,
     });
   }
 };
@@ -460,17 +496,16 @@ export const getAttendanceStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error fetching attendance status",
-      error: error.message,
     });
   }
 };
 
 // @desc    Get attendance status for all employees
 // @route   GET /api/attendance/all-status
-// @access  Private (All authenticated users)
+// @access  Private (Admin, HR Officer, Payroll Officer)
 export const getAllEmployeesAttendanceStatus = async (req, res) => {
   try {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getBusinessNow().date;
 
     // Get all users with their latest attendance status for today
     const [rows] = await pool.query(
@@ -521,7 +556,6 @@ export const getAllEmployeesAttendanceStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error fetching attendance status",
-      error: error.message,
     });
   }
 };
@@ -532,7 +566,7 @@ export const getAllEmployeesAttendanceStatus = async (req, res) => {
 export const getTodayAttendance = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const today = new Date().toISOString().split("T")[0];
+    const today = getBusinessNow().date;
 
     const [rows] = await pool.query(
       `SELECT 
@@ -567,7 +601,6 @@ export const getTodayAttendance = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error fetching attendance history",
-      error: error.message,
     });
   }
 };

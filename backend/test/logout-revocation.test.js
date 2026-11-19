@@ -393,7 +393,9 @@ describe("frontend logout keeps the token until the revoke is dispatched", () =>
     walk(frontendRoot);
 
     assert.deepEqual(offenders, [], `unawaited logout() left: ${offenders.join(", ")}`);
-    assert.equal(awaitedSites, 5, "all five handlers await the revoke");
+    // T-041 added the EmployeeDashboard's own handler; every call site — six
+    // now — awaits the revoke before navigating.
+    assert.equal(awaitedSites, 6, "all six handlers await the revoke");
   });
 
   it("the 401 interceptor does not reload the page for a logout 401", () => {
@@ -477,7 +479,9 @@ describe("frontend logout keeps the token until the revoke is dispatched", () =>
 
   it("the client uses the one existing logout endpoint and no new auth scheme", () => {
     const source = read("services/authService.js");
-    assert.match(source, /api\.post\('\/auth\/logout'\)/);
+    // T-041: the request carries a bounded timeout but nothing else changed —
+    // same endpoint, same verb, no new auth scheme.
+    assert.match(source, /api\.post\('\/auth\/logout', undefined, \{\s*timeout:/);
     const files = ["services/api.js", "services/authService.js", "context/AuthContext.jsx"];
     for (const file of files) {
       const text = read(file);
