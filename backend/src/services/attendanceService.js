@@ -459,7 +459,14 @@ export const updateAttendance = async ({ attendanceId, actor, changes }) => {
        FROM attendance WHERE attendance_id = ? FOR UPDATE`,
       [attendanceId],
     );
-    if (rows.length === 0) return { statusCode: 404, body: { success: false, message: "Attendance record not found" } };
+    if (rows.length === 0) {
+      // The locking read above takes TABLE IX plus an exclusive record lock on
+      // the supremum of the attendance PRIMARY index, so returning without
+      // ending the transaction leaves that lock on the pooled connection and
+      // every later attendance INSERT on it blocks until the lock-wait timeout.
+      await connection.rollback();
+      return { statusCode: 404, body: { success: false, message: "Attendance record not found" } };
+    }
 
     const current = rows[0];
     const attendanceDate = changes.attendance_date ?? current.attendance_date;

@@ -8,14 +8,15 @@ import {
 } from "../controllers/userController.js";
 import { User } from "../models/userModel.js";
 import { EmployeeProfile } from "../models/profileModel.js";
+import { Session } from "../models/sessionModel.js";
 
 const router = express.Router();
 
 // Create new user (Admin only)
 router.post("/create", protect, authorize("Admin"), createUser);
 
-// Get all users with profiles (All authenticated users can view)
-router.get("/", protect, getAllUsers);
+// Get all users with profiles (org-wide directory: Admin, HR and Payroll only)
+router.get("/", protect, authorize("Admin", "HR Officer", "Payroll Officer"), getAllUsers);
 
 // Get user by ID
 router.get("/:id", protect, getUserById);
@@ -60,7 +61,6 @@ router.get("/profile/:userId", protect, async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error fetching profile",
-      error: error.message,
     });
   }
 });
@@ -88,10 +88,11 @@ router.put("/profile/:userId", protect, async (req, res) => {
       message: "Profile updated successfully",
     });
   } catch (error) {
-    res.status(500).json({
+    const statusCode = error.statusCode || 500;
+
+    res.status(statusCode).json({
       success: false,
-      message: "Error updating profile",
-      error: error.message,
+      message: statusCode === 500 ? "Error updating profile" : error.message,
     });
   }
 });
@@ -104,6 +105,12 @@ router.put("/:userId/status", protect, authorize("Admin"), async (req, res) => {
 
     await User.updateStatus(userId, is_active);
 
+    // Deactivating an account must also kill every session it holds, so a
+    // previously issued token cannot be replayed if the account returns.
+    if (!is_active) {
+      await Session.revokeAllForUser(userId);
+    }
+
     res.status(200).json({
       success: true,
       message: "User status updated successfully",
@@ -112,7 +119,6 @@ router.put("/:userId/status", protect, authorize("Admin"), async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error updating user status",
-      error: error.message,
     });
   }
 });

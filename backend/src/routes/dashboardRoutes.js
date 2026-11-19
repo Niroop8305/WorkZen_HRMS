@@ -1,6 +1,7 @@
 import express from 'express';
 import { protect, authorize } from '../middleware/auth.js';
 import pool from '../config/database.js';
+import { getBusinessNow } from '../config/attendance.js';
 
 const router = express.Router();
 
@@ -17,8 +18,11 @@ router.get('/stats', protect, authorize('Admin', 'HR Officer'), async (req, res)
       'SELECT COUNT(DISTINCT department) as total FROM employee_profiles WHERE department IS NOT NULL'
     );
 
-    // Today's attendance
-    const today = new Date().toISOString().split('T')[0];
+    // Today's attendance. Uses the single attendance business-date rule
+    // (see src/config/attendance.js), not the UTC calendar date. One read
+    // serves the day and month metrics so they cannot straddle a boundary.
+    const businessNow = getBusinessNow();
+    const today = businessNow.date;
     const [todayAttendance] = await pool.query(
       'SELECT COUNT(*) as present FROM attendance WHERE attendance_date = ? AND status = "Present"',
       [today]
@@ -43,7 +47,9 @@ router.get('/stats', protect, authorize('Admin', 'HR Officer'), async (req, res)
        LIMIT 10`
     );
 
-    // Attendance summary for current month
+    // Attendance summary for current month. The period comes from the same
+    // business clock as the day above; MONTH(CURRENT_DATE) would resolve
+    // against the database session's own timezone instead.
     const [monthlyAttendance] = await pool.query(
       `SELECT 
          COUNT(DISTINCT user_id) as total_employees,
@@ -51,8 +57,9 @@ router.get('/stats', protect, authorize('Admin', 'HR Officer'), async (req, res)
          SUM(CASE WHEN status = 'Absent' THEN 1 ELSE 0 END) as total_absent,
          SUM(CASE WHEN status = 'On Leave' THEN 1 ELSE 0 END) as total_on_leave
        FROM attendance
-       WHERE MONTH(attendance_date) = MONTH(CURRENT_DATE)
-       AND YEAR(attendance_date) = YEAR(CURRENT_DATE)`
+       WHERE MONTH(attendance_date) = ?
+       AND YEAR(attendance_date) = ?`,
+      [businessNow.month, businessNow.year]
     );
 
     // Department-wise employee count
@@ -82,7 +89,6 @@ router.get('/stats', protect, authorize('Admin', 'HR Officer'), async (req, res)
     res.status(500).json({
       success: false,
       message: 'Error fetching dashboard statistics',
-      error: error.message
     });
   }
 });
@@ -91,8 +97,12 @@ router.get('/stats', protect, authorize('Admin', 'HR Officer'), async (req, res)
 router.get('/my-stats', protect, async (req, res) => {
   try {
     const userId = req.user.userId;
-    const currentMonth = new Date().getMonth() + 1;
-    const currentYear = new Date().getFullYear();
+    // The period must come from the business clock, like the attendance rows
+    // the view aggregates. getMonth()/getFullYear() are host-local and name
+    // the previous month or year during the shifted hours at a month end.
+    const businessNow = getBusinessNow();
+    const currentMonth = businessNow.month;
+    const currentYear = businessNow.year;
 
     // Monthly attendance summary
     const [attendanceSummary] = await pool.query(
@@ -141,7 +151,6 @@ router.get('/my-stats', protect, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching employee dashboard',
-      error: error.message
     });
   }
 });

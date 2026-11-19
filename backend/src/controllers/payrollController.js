@@ -16,7 +16,6 @@ const handleError = (res, error, fallbackMessage) => {
   return res.status(status).json({
     success: false,
     message: status >= 500 ? fallbackMessage : error.message,
-    ...(status >= 500 ? { error: error.message } : {}),
   });
 };
 

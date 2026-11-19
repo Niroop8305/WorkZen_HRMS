@@ -1,5 +1,34 @@
 import pool from "../config/database.js";
 
+// The only source of column identifiers for profile updates. Request bodies are
+// matched against these keys, so a client-supplied name can never reach the SQL
+// string, and columns outside this map cannot be mass-assigned.
+export const EDITABLE_PROFILE_COLUMNS = {
+  first_name: "first_name",
+  last_name: "last_name",
+  phone: "phone",
+  date_of_birth: "date_of_birth",
+  gender: "gender",
+  address: "address",
+  city: "city",
+  state: "state",
+  country: "country",
+  postal_code: "postal_code",
+  emergency_contact_name: "emergency_contact_name",
+  emergency_contact_phone: "emergency_contact_phone",
+  date_of_joining: "date_of_joining",
+  department: "department",
+  designation: "designation",
+  company_name: "company_name",
+  profile_picture: "profile_picture",
+};
+
+const badRequest = (message) => {
+  const error = new Error(message);
+  error.statusCode = 400;
+  throw error;
+};
+
 export const EmployeeProfile = {
   // Create employee profile
   create: async (profileData) => {
@@ -109,47 +138,32 @@ export const EmployeeProfile = {
   // Update profile
   update: async (userId, profileData) => {
     try {
-      // Handle JSON fields
-      const processedData = { ...profileData };
+      const keys = Object.keys(profileData || {});
 
-      // Convert arrays to JSON strings for skills and certifications
-      if (processedData.skills !== undefined) {
-        if (Array.isArray(processedData.skills)) {
-          processedData.skills = JSON.stringify(processedData.skills);
-          console.log("Saving skills:", processedData.skills);
-        } else if (typeof processedData.skills === "string") {
-          // Already a string, but verify it's valid JSON
-          try {
-            JSON.parse(processedData.skills);
-          } catch (e) {
-            console.error("Invalid skills JSON string:", processedData.skills);
-            processedData.skills = JSON.stringify([]);
-          }
-        } else {
-          processedData.skills = JSON.stringify([]);
-        }
+      if (keys.length === 0) {
+        badRequest("No profile fields provided to update");
       }
 
-      if (processedData.certifications !== undefined) {
-        if (Array.isArray(processedData.certifications)) {
-          processedData.certifications = JSON.stringify(
-            processedData.certifications
-          );
-          console.log("Saving certifications:", processedData.certifications);
-        } else if (typeof processedData.certifications === "string") {
-          // Already a string, but verify it's valid JSON
-          try {
-            JSON.parse(processedData.certifications);
-          } catch (e) {
-            console.error(
-              "Invalid certifications JSON string:",
-              processedData.certifications
-            );
-            processedData.certifications = JSON.stringify([]);
-          }
-        } else {
-          processedData.certifications = JSON.stringify([]);
-        }
+      const prohibited = keys.filter(
+        (key) => !(key in EDITABLE_PROFILE_COLUMNS)
+      );
+      if (prohibited.length > 0) {
+        badRequest(
+          "Profile update contains fields that are not editable through this endpoint"
+        );
+      }
+
+      const entries = keys.map((key) => [
+        EDITABLE_PROFILE_COLUMNS[key],
+        profileData[key],
+      ]);
+
+      if (
+        entries.some(
+          ([, value]) => value !== null && typeof value === "object"
+        )
+      ) {
+        badRequest("Profile fields must be scalar values");
       }
 
       // Check if profile exists
@@ -165,21 +179,13 @@ export const EmployeeProfile = {
         );
       }
 
-      // Only update fields that are provided
-      const fields = Object.keys(processedData)
-        .map((key) => `${key} = ?`)
-        .join(", ");
-      const values = [...Object.values(processedData), userId];
-
-      console.log("Updating profile with fields:", fields);
-      console.log("Values:", values);
+      const setClause = entries.map(([column]) => `${column} = ?`).join(", ");
+      const values = [...entries.map(([, value]) => value), userId];
 
       await pool.query(
-        `UPDATE employee_profiles SET ${fields} WHERE user_id = ?`,
+        `UPDATE employee_profiles SET ${setClause} WHERE user_id = ?`,
         values
       );
-
-      console.log("Profile updated successfully for user:", userId);
     } catch (error) {
       console.error("Error updating profile:", error);
       throw error;

@@ -1,20 +1,19 @@
-import nodemailer from "nodemailer";
+import {
+  createTransporter,
+  deliveryResult,
+  emailTransportMode,
+  failureResult,
+  skippedResult,
+  smtpConfigured,
+} from "../config/email.js";
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
-// Create transporter
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD,
-    },
-  });
-};
-
 // Send welcome email with credentials
 export const sendWelcomeEmail = async (userDetails) => {
+  if (!smtpConfigured()) {
+    return skippedResult("SMTP credentials are not configured");
+  }
   try {
     const transporter = createTransporter();
 
@@ -233,24 +232,52 @@ export const sendWelcomeEmail = async (userDetails) => {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log("Welcome email sent:", info.messageId);
-    return { success: true, messageId: info.messageId };
+    console.log("Welcome email accepted:", info.messageId);
+    return deliveryResult(info);
   } catch (error) {
     console.error("Error sending welcome email:", error);
-    return { success: false, error: error.message };
+    return failureResult(error);
   }
 };
 
 // Test email configuration
 export const testEmailConnection = async () => {
+  // A diagnostic is not an exemption: an unconfigured deployment must not dial a
+  // provider with the placeholder account, because that is a real connection
+  // attempt and a real credential-probing failure against someone else's service.
+  if (!smtpConfigured()) {
+    return skippedResult("SMTP credentials are not configured");
+  }
+
+  const mode = emailTransportMode();
+
+  // A connection test is the one path that would actively hand-shake and
+  // authenticate with the provider, so under dry-run it reports the mode instead
+  // of verifying. The test seam still runs, so its failure branch stays provable.
+  if (mode === "dry-run") {
+    console.log("Email connection test skipped: mail transport is dry-run");
+    return {
+      success: true,
+      delivered: false,
+      transport: mode,
+      message:
+        "Mail delivery is disabled in this environment (EMAIL_DRY_RUN=true); no SMTP connection was attempted",
+    };
+  }
+
   try {
     const transporter = createTransporter();
     await transporter.verify();
     console.log("Email server connection successful");
-    return { success: true, message: "Email configuration is working" };
+    return {
+      success: true,
+      delivered: true,
+      transport: mode,
+      message: "Email configuration is working",
+    };
   } catch (error) {
     console.error("Email server connection failed:", error);
-    return { success: false, error: error.message };
+    return failureResult(error);
   }
 };
 
@@ -267,8 +294,11 @@ export const sendLeaveNotification = async ({
 }) => {
   const to = Array.isArray(recipients) ? recipients.filter(Boolean) : [];
   if (employeeEmail) to.push(employeeEmail);
-  if (to.length === 0 || !process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-    return { success: false, skipped: true };
+  if (to.length === 0) {
+    return skippedResult("No recipients resolved for this notification");
+  }
+  if (!smtpConfigured()) {
+    return skippedResult("SMTP credentials are not configured");
   }
 
   try {
@@ -284,285 +314,9 @@ export const sendLeaveNotification = async ({
         <p>Type: ${leaveType}</p>
         <p>Dates: ${startDate} to ${endDate} (${totalDays} day(s))</p>${reason}`,
     });
-    return { success: true, messageId: info.messageId };
+    return deliveryResult(info);
   } catch (error) {
     console.error("Leave notification failed:", error.message);
-    return { success: false, error: error.message };
-  }
-};
-
-// Send password change confirmation email
-export const sendPasswordChangeEmail = async (email, userName) => {
-  try {
-    const transporter = createTransporter();
-
-    const mailOptions = {
-      from: {
-        name: "Odoo HRMS",
-        address: process.env.EMAIL_USER,
-      },
-      to: email,
-      subject: "🔒 Password Changed Successfully - Odoo HRMS",
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body {
-              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            .header {
-              background: linear-gradient(135deg, #714B67 0%, #8B5F7D 100%);
-              color: white;
-              padding: 30px;
-              text-align: center;
-              border-radius: 8px 8px 0 0;
-            }
-            .content {
-              background: #ffffff;
-              padding: 30px;
-              border: 1px solid #e0e0e0;
-              border-top: none;
-            }
-            .info-box {
-              background: #f8f9fa;
-              border-left: 4px solid #28a745;
-              padding: 20px;
-              margin: 20px 0;
-              border-radius: 4px;
-            }
-            .warning-box {
-              background: #fff3cd;
-              border: 1px solid #ffc107;
-              padding: 15px;
-              margin: 20px 0;
-              border-radius: 4px;
-            }
-            .footer {
-              background: #f8f9fa;
-              padding: 20px;
-              text-align: center;
-              border-radius: 0 0 8px 8px;
-              font-size: 14px;
-              color: #6c757d;
-              border: 1px solid #e0e0e0;
-              border-top: none;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>🔒 Password Changed</h1>
-          </div>
-          
-          <div class="content">
-            <p>Dear <strong>${userName}</strong>,</p>
-            
-            <div class="info-box">
-              <p style="margin: 0;">
-                <strong>✅ Your password has been changed successfully!</strong>
-              </p>
-            </div>
-            
-            <p>
-              This email confirms that your Odoo HRMS account password was changed on 
-              <strong>${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}</strong>.
-            </p>
-            
-            <div class="warning-box">
-              <strong>⚠️ Did you make this change?</strong>
-              <p style="margin: 5px 0 0 0;">
-                If you did not change your password, please contact your system administrator 
-                immediately or reset your password right away to secure your account.
-              </p>
-            </div>
-            
-            <p>
-              <strong>Security Tips:</strong>
-            </p>
-            <ul>
-              <li>Never share your password with anyone</li>
-              <li>Use a unique password for your HRMS account</li>
-              <li>Change your password regularly</li>
-              <li>Enable two-factor authentication if available</li>
-            </ul>
-            
-            <p>
-              If you need any assistance, please contact your HR department or system administrator.
-            </p>
-            
-            <p>
-              Best regards,<br>
-              <strong>Odoo HRMS Team</strong>
-            </p>
-          </div>
-          
-          <div class="footer">
-            <p>
-              This is an automated message. Please do not reply to this email.<br>
-              © ${new Date().getFullYear()} Odoo India. All rights reserved.
-            </p>
-          </div>
-        </body>
-        </html>
-      `,
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log("Password change confirmation email sent:", info.messageId);
-    return { success: true, messageId: info.messageId };
-  } catch (error) {
-    console.error("Error sending password change email:", error);
-    return { success: false, error: error.message };
-  }
-};
-
-// Send password reset code email
-export const sendPasswordResetCodeEmail = async (
-  email,
-  userName,
-  resetCode,
-) => {
-  try {
-    const transporter = createTransporter();
-
-    const mailOptions = {
-      from: {
-        name: "Odoo HRMS",
-        address: process.env.EMAIL_USER,
-      },
-      to: email,
-      subject: "🔐 Password Reset Code - Odoo HRMS",
-      html: `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <style>
-            body {
-              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-              line-height: 1.6;
-              color: #333;
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            .header {
-              background: linear-gradient(135deg, #714B67 0%, #8B5F7D 100%);
-              color: white;
-              padding: 30px;
-              text-align: center;
-              border-radius: 8px 8px 0 0;
-            }
-            .content {
-              background: #ffffff;
-              padding: 30px;
-              border: 1px solid #e0e0e0;
-              border-top: none;
-            }
-            .code-box {
-              background: #f8f9fa;
-              border: 2px solid #714B67;
-              padding: 30px;
-              margin: 25px 0;
-              text-align: center;
-              border-radius: 8px;
-            }
-            .code {
-              font-size: 36px;
-              font-weight: bold;
-              color: #714B67;
-              letter-spacing: 8px;
-              font-family: 'Courier New', monospace;
-            }
-            .warning-box {
-              background: #fff3cd;
-              border: 1px solid #ffc107;
-              padding: 15px;
-              margin: 20px 0;
-              border-radius: 4px;
-            }
-            .footer {
-              background: #f8f9fa;
-              padding: 20px;
-              text-align: center;
-              border-radius: 0 0 8px 8px;
-              font-size: 14px;
-              color: #6c757d;
-              border: 1px solid #e0e0e0;
-              border-top: none;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>🔐 Password Reset Request</h1>
-          </div>
-          
-          <div class="content">
-            <p>Dear <strong>${userName}</strong>,</p>
-            
-            <p>
-              We received a request to reset your password for your Odoo HRMS account. 
-              Use the code below to complete the password reset process.
-            </p>
-            
-            <div class="code-box">
-              <p style="margin: 0 0 10px 0; color: #6c757d; font-size: 14px;">Your Reset Code:</p>
-              <div class="code">${resetCode}</div>
-              <p style="margin: 15px 0 0 0; color: #6c757d; font-size: 13px;">
-                This code expires in <strong>10 minutes</strong>
-              </p>
-            </div>
-            
-            <div class="warning-box">
-              <strong>⚠️ Security Notice:</strong>
-              <p style="margin: 5px 0 0 0;">
-                If you didn't request a password reset, please ignore this email. 
-                Your password will remain unchanged.
-              </p>
-            </div>
-            
-            <p>
-              <strong>How to reset your password:</strong>
-            </p>
-            <ol>
-              <li>Go to your profile settings in Odoo HRMS</li>
-              <li>Enter the reset code shown above</li>
-              <li>Create a new password</li>
-              <li>Save your changes</li>
-            </ol>
-            
-            <p>
-              If you need any assistance, please contact your HR department or system administrator.
-            </p>
-            
-            <p>
-              Best regards,<br>
-              <strong>Odoo HRMS Team</strong>
-            </p>
-          </div>
-          
-          <div class="footer">
-            <p>
-              This is an automated message. Please do not reply to this email.<br>
-              © ${new Date().getFullYear()} Odoo India. All rights reserved.
-            </p>
-          </div>
-        </body>
-        </html>
-      `,
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log("Password reset code email sent:", info.messageId);
-    return { success: true, messageId: info.messageId };
-  } catch (error) {
-    console.error("Error sending password reset code email:", error);
-    return { success: false, error: error.message };
+    return failureResult(error);
   }
 };

@@ -23,13 +23,25 @@ export const User = {
     return rows[0];
   },
 
-  // Find user by ID
+  // Find user by ID for display: no credential column is read, so no response
+  // built from this row can serialize a hash. The login path uses findByEmail,
+  // which is server-side only.
   findById: async (userId) => {
     const [rows] = await pool.query(
-      `SELECT u.*, r.role_name 
+      `SELECT u.user_id, u.role_id, u.email, u.is_active, u.last_login,
+              u.created_at, u.updated_at, r.role_name 
        FROM users u 
        INNER JOIN roles r ON u.role_id = r.role_id 
        WHERE u.user_id = ?`,
+      [userId]
+    );
+    return rows[0];
+  },
+
+  // Only for verifying the current password; never return this row to a client.
+  findCredentialsById: async (userId) => {
+    const [rows] = await pool.query(
+      "SELECT user_id, email, is_active, password_hash FROM users WHERE user_id = ?",
       [userId]
     );
     return rows[0];

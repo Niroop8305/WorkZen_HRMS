@@ -48,11 +48,19 @@ const getTimeZoneParts = (date) => {
   return {
     date: `${parts.year}-${parts.month}-${parts.day}`,
     datetime: `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`,
+    month: Number(parts.month),
+    year: Number(parts.year),
     minutesSinceMidnight:
       Number(parts.hour) * 60 + Number(parts.minute),
   };
 };
 
+// One business-date rule for all attendance: "today" is the calendar date in
+// attendanceConfig.timeZone, never the UTC date from toISOString(). Between
+// 18:30 and 24:00 UTC the two differ, so every endpoint must use this helper.
+// The same rule names "this month" and "this year": month and year come from
+// this helper too, because the shifted days at a month end belong to the
+// business month the UTC clock has already left.
 export const getBusinessNow = () => getTimeZoneParts(new Date());
 
 export const parseSqlDateTime = (value) => {

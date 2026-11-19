@@ -1,8 +1,72 @@
 import pkg from "nodemailer";
 const { createTransport } = pkg;
 
-// Create email transporter
-const createTransporter = () => {
+// Single source of truth for how mail leaves this process. Every sender in the
+// application - authentication mail in this file and the welcome, leave and
+// connection-test mail in services/emailService.js - must come through
+// createTransporter, so one switch cannot be forgotten in a second copy.
+// Reset codes and credential mails must never leave the process during tests
+// or dry-run deployments: the JSON transport renders the message and returns
+// without any SMTP connection. Unset (production default) keeps real delivery.
+// Read as a boolean, not as one exact string: a value that is set but is not a
+// recognised "off" token means the operator meant to disable delivery, so it
+// disables delivery. Guessing wrong toward real delivery is the unsafe error.
+const OFF_VALUES = new Set(["", "false", "0", "no", "off"]);
+const ON_VALUES = new Set(["true", "1", "yes", "on"]);
+
+const isDryRunRequested = () => {
+  const raw = process.env.EMAIL_DRY_RUN;
+  if (raw === undefined) return false;
+  return !OFF_VALUES.has(raw.trim().toLowerCase());
+};
+
+// Names the variable, never its value: a boot log must not echo an environment
+// that may hold a secret.
+export const emailConfigWarnings = () => {
+  const raw = process.env.EMAIL_DRY_RUN;
+  if (raw === undefined) return [];
+  const normalized = raw.trim().toLowerCase();
+  if (OFF_VALUES.has(normalized) || ON_VALUES.has(normalized)) return [];
+  return [
+    'EMAIL_DRY_RUN is set to a value that is not a recognised boolean; mail delivery is disabled. Use "true" to disable it or "false" to send real mail.',
+  ];
+};
+
+export const emailTransportMode = () => {
+  if (
+    process.env.NODE_ENV !== "production" &&
+    process.env.EMAIL_FORCE_FAIL === "true"
+  ) {
+    return "forced-failure";
+  }
+  if (isDryRunRequested()) {
+    return "dry-run";
+  }
+  return "smtp";
+};
+
+// Only real SMTP delivery needs an account to send from. Under dry-run or the
+// test-only failure seam there is nothing to configure, so an unconfigured
+// deployment skips instead of dialling a mail server with placeholder
+// credentials. Every sender shares this one guard.
+export const smtpConfigured = () =>
+  emailTransportMode() !== "smtp" ||
+  (!!process.env.EMAIL_USER && !!process.env.EMAIL_PASSWORD);
+
+export const createTransporter = () => {
+  const mode = emailTransportMode();
+
+  if (mode === "forced-failure") {
+    const fail = async () => {
+      throw new Error("Simulated mail transport failure (EMAIL_FORCE_FAIL=true)");
+    };
+    return { sendMail: fail, verify: fail };
+  }
+
+  if (mode === "dry-run") {
+    return createTransport({ jsonTransport: true });
+  }
+
   // For development, you can use Gmail or any SMTP service
   // For production, use environment variables
   const transporter = createTransport({
@@ -16,8 +80,42 @@ const createTransporter = () => {
   return transporter;
 };
 
+// Every sender reports the same shape. `success` means the pipeline accepted the
+// message; `delivered` distinguishes mail that actually left for SMTP from mail
+// that was only rendered, so a caller can never report "sent" for a dry-run skip.
+export const deliveryResult = (info) => {
+  const mode = emailTransportMode();
+  return {
+    success: true,
+    delivered: mode === "smtp",
+    transport: mode,
+    messageId: info?.messageId ?? null,
+  };
+};
+
+export const skippedResult = (reason) => ({
+  success: false,
+  skipped: true,
+  delivered: false,
+  transport: emailTransportMode(),
+  reason,
+  error: reason,
+});
+
+// The error text stays inside the process: callers log it, and no HTTP response
+// body may carry it.
+export const failureResult = (error) => ({
+  success: false,
+  delivered: false,
+  transport: emailTransportMode(),
+  error: error.message,
+});
+
 // Send password change confirmation email
 export const sendPasswordChangeEmail = async (userEmail, userName) => {
+  if (!smtpConfigured()) {
+    return skippedResult("SMTP credentials are not configured");
+  }
   try {
     const transporter = createTransporter();
 
@@ -145,11 +243,11 @@ export const sendPasswordChangeEmail = async (userEmail, userName) => {
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log("✅ Password change email sent:", info.messageId);
-    return { success: true, messageId: info.messageId };
+    console.log("✅ Password change email accepted:", info.messageId);
+    return deliveryResult(info);
   } catch (error) {
     console.error("❌ Error sending password change email:", error);
-    return { success: false, error: error.message };
+    return failureResult(error);
   }
 };
 
@@ -159,6 +257,9 @@ export const sendPasswordResetByAdminEmail = async (
   userName,
   tempPassword
 ) => {
+  if (!smtpConfigured()) {
+    return skippedResult("SMTP credentials are not configured");
+  }
   try {
     const transporter = createTransporter();
 
@@ -297,11 +398,11 @@ export const sendPasswordResetByAdminEmail = async (
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log("✅ Password reset email sent:", info.messageId);
-    return { success: true, messageId: info.messageId };
+    console.log("✅ Password reset email accepted:", info.messageId);
+    return deliveryResult(info);
   } catch (error) {
     console.error("❌ Error sending password reset email:", error);
-    return { success: false, error: error.message };
+    return failureResult(error);
   }
 };
 
@@ -311,6 +412,9 @@ export const sendPasswordResetCodeEmail = async (
   userName,
   resetCode
 ) => {
+  if (!smtpConfigured()) {
+    return skippedResult("SMTP credentials are not configured");
+  }
   try {
     const transporter = createTransporter();
 
@@ -476,11 +580,11 @@ export const sendPasswordResetCodeEmail = async (
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log("✅ Password reset verification code sent:", info.messageId);
-    return { success: true, messageId: info.messageId };
+    console.log("✅ Password reset verification code accepted:", info.messageId);
+    return deliveryResult(info);
   } catch (error) {
     console.error("❌ Error sending verification code email:", error);
-    return { success: false, error: error.message };
+    return failureResult(error);
   }
 };
 

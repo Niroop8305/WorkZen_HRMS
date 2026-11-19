@@ -3,6 +3,26 @@ import {
   sendPasswordResetByAdminEmail,
 } from "./email.js";
 
+// "success" only means the pipeline accepted the message. This CLI has to say
+// which transport did the work, otherwise a dry-run run reports real delivery.
+const report = (label, result) => {
+  if (result.skipped) {
+    console.log(`⏭️ ${label} skipped: ${result.reason}`);
+    return;
+  }
+  if (!result.success) {
+    console.log(`❌ ${label} failed: ${result.error}`);
+    return;
+  }
+  if (result.delivered) {
+    console.log(`✅ ${label} handed to the SMTP server: ${result.messageId}`);
+  } else {
+    console.log(
+      `🧾 ${label} rendered without delivery (transport=${result.transport}); no SMTP connection was used`,
+    );
+  }
+};
+
 // Test email functionality
 async function testEmailService() {
   console.log("🧪 Testing Email Service...\n");
@@ -14,13 +34,7 @@ async function testEmailService() {
 
   try {
     const result1 = await sendPasswordChangeEmail(testEmail, testName);
-    if (result1.success) {
-      console.log("✅ Password change email sent successfully!");
-      console.log(`   Message ID: ${result1.messageId}\n`);
-    } else {
-      console.log("❌ Failed to send password change email");
-      console.log(`   Error: ${result1.error}\n`);
-    }
+    report("Password change confirmation email", result1);
   } catch (error) {
     console.log("❌ Error sending password change email:", error.message, "\n");
   }
@@ -35,13 +49,7 @@ async function testEmailService() {
       testName,
       tempPassword
     );
-    if (result2.success) {
-      console.log("✅ Password reset email sent successfully!");
-      console.log(`   Message ID: ${result2.messageId}\n`);
-    } else {
-      console.log("❌ Failed to send password reset email");
-      console.log(`   Error: ${result2.error}\n`);
-    }
+    report("Admin password reset email", result2);
   } catch (error) {
     console.log("❌ Error sending password reset email:", error.message, "\n");
   }
