@@ -100,6 +100,44 @@ describe("Reports", () => {
     expect(screen.getAllByText("30 Oct 2026").length).toBeGreaterThan(0);
   });
 
+  it("monthly summary maps the /attendance/all payload shape (employee_name, full datetimes)", async () => {
+    const allRow = {
+      attendance_id: 9,
+      user_id: 7, // /all uses snake_case user_id
+      attendance_date: "2026-10-30",
+      check_in_time: "2026-10-30 09:14:00",
+      check_out_time: "2026-10-30 18:02:00",
+      total_hours: 8.8,
+      worked_minutes: 528,
+      late_minutes: 14,
+      status: "Late",
+      employee_name: "Aarav Sharma", // /all uses employee_name, NOT userName
+      employee_code: "WZ-SYN-0990",
+      department: "Engineering",
+    };
+    apiGet.mockResolvedValue({
+      data: { success: true, data: [allRow], pagination: { total: 1 } },
+    });
+    renderReports();
+    const select = screen.getByRole("combobox");
+    const nativeSelectSetter = Object.getOwnPropertyDescriptor(
+      window.HTMLSelectElement.prototype,
+      "value",
+    ).set;
+    nativeSelectSetter.call(select, "monthly");
+    select.dispatchEvent(new window.Event("change", { bubbles: true }));
+    screen.getByRole("button", { name: /run report/i }).click();
+
+    await waitFor(() =>
+      expect(screen.getByText(/Aarav Sharma · WZ-SYN-0990/)).toBeTruthy(),
+    );
+    expect(screen.getAllByText("09:14 AM").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("06:02 PM").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("8.80 hrs").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/Unknown/)).toBeNull();
+    expect(screen.queryByText(/undefined/)).toBeNull();
+  });
+
   it("payroll report maps gross/deductions/net without undefined cells", async () => {
     apiGet.mockResolvedValue({
       data: { success: true, data: [payrollRow] },

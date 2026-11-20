@@ -19,7 +19,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
-import { Download, PlayCircle } from "lucide-react";
+import { BarChart3, Download, PlayCircle } from "lucide-react";
 import "../styles/App.css";
 import "../styles/Reports.css";
 import { todayLocalKey } from "../utils/dates";
@@ -137,10 +137,12 @@ const Reports = () => {
   const attendanceColumns =
     reportType === "monthly"
       ? [
-          { label: "EMPLOYEE", value: (r) => `${r.userName ?? "Unknown"}${r.employee_code ? ` · ${r.employee_code}` : ""}` },
+          // /attendance/all rows carry employee_name + full check_in_time
+          // datetimes (no checkIn/checkOut aliases like the /day endpoint).
+          { label: "EMPLOYEE", value: (r) => `${r.employee_name ?? r.userName ?? "Unknown"}${r.employee_code ? ` · ${r.employee_code}` : ""}` },
           { label: "DATE", value: (r) => formatDateLabel(r.attendance_date) },
-          { label: "CHECK IN", value: (r) => formatTime12(r.checkIn ?? r.check_in_time) },
-          { label: "CHECK OUT", value: (r) => formatTime12(r.checkOut ?? r.check_out_time) },
+          { label: "CHECK IN", value: (r) => formatTime12(r.check_in_time) },
+          { label: "CHECK OUT", value: (r) => formatTime12(r.check_out_time) },
           { label: "WORK HOURS", value: (r) => formatHoursFromMinutes(r.worked_minutes) },
           { label: "LATE", value: (r) => `${r.late_minutes ?? 0} min` },
           { label: "STATUS", value: (r) => r.status ?? "—" },
@@ -200,9 +202,19 @@ const Reports = () => {
           <div className="report-card">
             <div className="report-header">
               <div className="report-title-section">
-                <h2 className="report-name">
-                  {REPORT_TYPES.find((t) => t.id === reportType)?.label}
-                </h2>
+                <div className="report-title-block">
+                  <span className="report-title-icon" aria-hidden="true">
+                    <BarChart3 size={18} />
+                  </span>
+                  <div>
+                    <h2 className="report-name">
+                      {REPORT_TYPES.find((t) => t.id === reportType)?.label}
+                    </h2>
+                    <p className="report-name-sub">
+                      Server-computed data, exported as rendered.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
