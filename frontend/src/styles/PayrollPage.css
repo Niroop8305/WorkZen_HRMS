@@ -148,15 +148,19 @@
 }
 
 /* Tables */
+/* overflow-x: auto — the 11-column table is wider than the container, and
+   overflow:hidden used to CLIP the Actions (View Payslip / Apply) cells with
+   no way to reach them. The wrapper now scrolls instead. */
 .payroll-table-wrapper {
   background: var(--bg-elevated);
   border: 1px solid rgba(148, 163, 184, 0.16);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow-x: auto;
 }
 
 .payroll-table {
   width: 100%;
+  min-width: 1080px; /* keep 11 columns legible; wrapper scrolls below this */
   border-collapse: collapse;
   font-size: 14px;
 }
@@ -217,10 +221,15 @@
 
 .row-actions {
   display: flex;
+  flex-direction: column;
   gap: 8px;
-  justify-content: flex-end;
-  align-items: center;
-  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.row-actions .btn-view-payslip,
+.row-actions .btn-apply-status,
+.status-control select {
+  white-space: nowrap;
 }
 
 /* Status pills */
@@ -273,6 +282,7 @@
   color: var(--text-primary);
   padding: 6px 8px;
   font-size: 13px;
+  max-width: 150px;
 }
 
 .status-final {

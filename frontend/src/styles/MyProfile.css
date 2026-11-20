@@ -57,7 +57,7 @@
   width: 140px;
   height: 140px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #8b5f83 0%, #714b67 100%);
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -205,7 +205,7 @@
 }
 
 .header-edit-section .cancel-btn {
-  background-color: #555;
+  background-color: var(--bg-elevated);
   color: white;
 }
 
@@ -571,7 +571,7 @@ select.info-input option {
 }
 
 .private-info-actions .cancel-btn {
-  background-color: #555;
+  background-color: var(--bg-elevated);
   color: white;
   padding: 12px 30px;
   border: none;
@@ -1037,7 +1037,7 @@ select.info-input option {
 }
 
 .request-code-btn {
-  background: linear-gradient(135deg, #714b67 0%, #8b5f83 100%);
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   color: white;
   padding: 14px 32px;
   font-size: 1.05rem;
@@ -1101,7 +1101,7 @@ select.info-input option {
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background-color: #555;
+  background-color: var(--bg-elevated);
   transform: translateY(-2px);
 }
 
@@ -1348,7 +1348,7 @@ select.info-input option {
 
 .header-edit-section .edit-btn,
 .btn-primary {
-  background: linear-gradient(135deg, #714b67, #4f46e5);
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
   box-shadow: 0 10px 24px rgba(79, 70, 229, 0.25);
 }
 
@@ -1393,7 +1393,7 @@ select.info-input option {
 
 .profile-table th {
   font-weight: 600;
-  color: #555;
+  color: var(--text-muted);
 }
 
 /* Shell integration: profile page renders inside dashboard-main, so drop the
@@ -1405,4 +1405,45 @@ select.info-input option {
 
 .dashboard-layout .loading {
   min-height: 40vh;
+}
+
+/* ---- Design-system polish: active tab accent + avatar ring ---- */
+.tab {
+  position: relative;
+  font-weight: 600;
+  font-size: 14.5px;
+}
+
+.tab.active::after {
+  content: "";
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  bottom: 0;
+  height: 3px;
+  border-radius: 999px 999px 0 0;
+  background: linear-gradient(90deg, #818cf8, #6366f1);
+}
+
+.profile-avatar span.avatar-initial {
+  box-shadow:
+    0 0 0 3px var(--bg-card),
+    0 0 0 5px rgba(99, 102, 241, 0.35);
+}
+
+/* Textareas inside the profile tabs follow the global dark form controls */
+.edit-textarea {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  color: var(--text-primary);
+  padding: 12px 14px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.edit-textarea:focus {
+  border-color: var(--focus-ring);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.28);
 }
