@@ -2,14 +2,15 @@
    Employee Attendance Page - Monthly View
    ===================================================== */
 
+/* min-width: 0 stops the content from spilling over the sidebar nav
+   (a flex child defaults to min-width: auto and blows out). */
 .employee-attendance-page {
   flex: 1;
-  background: #000000;
-  color: #ffffff;
-  padding: 0;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
-    "Cantarell", sans-serif;
+  min-width: 0;
+  overflow-x: hidden;
+  background: transparent;
+  color: var(--text-primary);
+  padding: 0 0 40px;
   overflow-y: auto;
 }
 
@@ -22,20 +23,20 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px 30px;
-  background: #000000;
-  border-bottom: 1px solid #1a1a1a;
+  background: transparent;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .ea-header .header-title {
   font-size: 24px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .ea-header .btn-logout {
-  background: #714b67;
+  background: var(--focus-ring);
   border: none;
-  color: #ffffff;
+  color: var(--text-primary);
   padding: 10px 24px;
   border-radius: 8px;
   cursor: pointer;
@@ -45,7 +46,7 @@
 }
 
 .ea-header .btn-logout:hover {
-  background: #8a5c7f;
+  background: #4f46e5;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(113, 75, 103, 0.5);
 }
@@ -59,14 +60,14 @@
   gap: 10px;
   padding: 20px 30px;
   align-items: center;
-  background: #000000;
-  border-bottom: 1px solid #1a1a1a;
+  background: transparent;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .ea-nav-btn {
-  background: #714b67;
+  background: var(--focus-ring);
   border: none;
-  color: #ffffff;
+  color: var(--text-primary);
   width: 60px;
   height: 60px;
   border-radius: 8px;
@@ -79,9 +80,9 @@
 }
 
 .ea-month-picker {
-  background: #1a1a1a;
+  background: var(--bg-card);
   border: none;
-  color: #ffffff;
+  color: var(--text-primary);
   padding: 15px 25px;
   border-radius: 8px;
   font-size: 18px;
@@ -94,11 +95,11 @@
 }
 
 .ea-month-picker:hover {
-  background: #714b67;
+  background: var(--focus-ring);
 }
 
 .ea-month-picker:focus {
-  background: #714b67;
+  background: var(--focus-ring);
 }
 
 /* Month picker calendar icon */
@@ -122,7 +123,7 @@
 .ea-card {
   flex: 1;
   min-width: 0;
-  background: #1a1a1a;
+  background: var(--bg-card);
   border: none;
   border-radius: 12px;
   padding: 30px 20px;
@@ -131,14 +132,14 @@
 }
 
 .ea-card:hover {
-  background: #714b67;
+  background: var(--focus-ring);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(113, 75, 103, 0.4);
 }
 
 .ea-card-title {
   font-size: 16px;
-  color: #ffffff;
+  color: var(--text-primary);
   margin-bottom: 15px;
   font-weight: 400;
   line-height: 1.4;
@@ -146,7 +147,7 @@
 
 .ea-card-value {
   font-size: 36px;
-  color: #ffffff;
+  color: var(--text-primary);
   font-weight: 300;
 }
 
@@ -157,10 +158,10 @@
 .ea-date-heading {
   font-size: 32px;
   font-weight: 300;
-  color: #ffffff;
+  color: var(--text-primary);
   padding: 30px;
   text-align: center;
-  background: #000000;
+  background: transparent;
 }
 
 /* =====================================================
@@ -177,7 +178,7 @@
 }
 
 .ea-loading p {
-  color: #999;
+  color: var(--text-muted);
   font-size: 16px;
   font-weight: 300;
 }
@@ -185,8 +186,8 @@
 .ea-spinner {
   width: 50px;
   height: 50px;
-  border: 3px solid #333;
-  border-top-color: #714b67;
+  border: 3px solid var(--border-strong);
+  border-top-color: var(--focus-ring);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
@@ -215,7 +216,7 @@
    ===================================================== */
 
 .ea-table-wrapper {
-  background: #1a1a1a;
+  background: var(--bg-card);
   overflow-x: auto;
   padding: 0 30px 30px 30px;
   border-radius: 12px;
@@ -226,31 +227,31 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 18px;
-  background: #1a1a1a;
+  background: var(--bg-card);
   border: none;
 }
 
 .ea-table thead {
-  background: #714b67;
+  background: var(--focus-ring);
 }
 
 .ea-table th {
   padding: 20px;
   text-align: left;
   font-weight: 500;
-  color: #ffffff;
+  color: var(--text-primary);
   font-size: 16px;
   border: none;
-  background: #714b67;
+  background: var(--focus-ring);
 }
 
 .ea-table tbody tr {
   transition: background 0.15s ease;
-  border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .ea-table tbody tr:hover {
-  background: #252525;
+  background: rgba(148, 163, 184, 0.06);
 }
 
 .ea-table tbody tr.weekend-row {
@@ -259,7 +260,7 @@
 
 .ea-table td {
   padding: 18px 20px;
-  color: #ffffff;
+  color: var(--text-primary);
   font-size: 16px;
   border: none;
   font-weight: 300;
@@ -432,4 +433,266 @@
 
 .ea-table tbody tr {
   border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+/* =====================================================
+   Design-system additions (nav bar, today bar, table head,
+   empty state) — replacing the removed Odoo-era rules
+   ===================================================== */
+
+.ea-nav-bar {
+  align-items: center;
+  padding: 20px 32px;
+}
+
+.ea-nav-btn {
+  background: rgba(99, 102, 241, 0.14);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #a5b4fc;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 120ms ease;
+}
+
+.ea-nav-btn:hover {
+  background: rgba(99, 102, 241, 0.24);
+}
+
+.ea-month-picker {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 10px;
+  color: var(--text-primary);
+  padding: 10px 14px;
+  font-size: 14px;
+  color-scheme: dark;
+}
+
+.ea-month-picker:hover,
+.ea-month-picker:focus {
+  border-color: var(--focus-ring);
+  background: var(--input-bg);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.28);
+  outline: none;
+}
+
+/* Today strip: card-like bar with styled check-in/out actions */
+.ea-today-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 0 32px 8px;
+  padding: 16px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  font-size: 14px;
+  color: #e2e8f0;
+}
+
+.ea-today-status strong {
+  color: var(--text-primary);
+}
+
+.ea-attendance-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.ea-btn {
+  padding: 9px 20px;
+  border: none;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 120ms ease, opacity 120ms ease;
+}
+
+.ea-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ea-btn-primary {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
+}
+
+.ea-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.ea-btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: #e2e8f0;
+}
+
+.ea-btn-secondary:hover:not(:disabled) {
+  border-color: #6366f1;
+}
+
+/* Summary cards: match the dashboard/Reports KPI cards */
+.ea-summary-cards {
+  padding: 12px 32px;
+}
+
+.ea-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 24px 20px;
+  text-align: center;
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+
+.ea-card:hover {
+  background: var(--bg-card);
+  border-color: rgba(99, 102, 241, 0.35);
+  transform: translateY(-2px);
+  box-shadow: none;
+}
+
+.ea-card-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.ea-card-value {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Month banner: subtle indigo tint like the attendance day banner */
+.ea-date-heading {
+  margin: 8px 32px;
+  padding: 14px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--text-primary);
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+
+/* Table */
+.ea-table-wrapper {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 8px 32px 0;
+  padding: 0;
+}
+
+.ea-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  background: transparent;
+  border: none;
+}
+
+.ea-table thead {
+  background: rgba(15, 23, 42, 0.7);
+}
+
+.ea-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border: none;
+  background: transparent;
+}
+
+.ea-table tbody tr {
+  transition: background 0.15s ease;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.ea-table tbody tr:hover {
+  background: rgba(148, 163, 184, 0.06);
+}
+
+.ea-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.ea-table td {
+  padding: 12px 16px;
+  font-size: 13.5px;
+  color: #e2e8f0;
+  border: none;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ea-empty-cell {
+  text-align: center;
+  padding: 40px !important;
+  color: var(--text-muted) !important;
+  white-space: normal !important;
+}
+
+/* Pagination shares the styled pattern from Attendance */
+.ea-page .attendance-pagination,
+.employee-attendance-page .attendance-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 16px;
+}
+
+.employee-attendance-page .attendance-pagination span {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.employee-attendance-page .attendance-pagination button {
+  padding: 7px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  background: transparent;
+  color: #a5b4fc;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.employee-attendance-page .attendance-pagination button:hover:not(:disabled) {
+  background: rgba(99, 102, 241, 0.12);
+}
+
+.employee-attendance-page .attendance-pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ea-loading p,
+.ea-error {
+  margin: 20px 32px;
 }

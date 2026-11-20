@@ -6,6 +6,7 @@ import { attendanceService } from "../services/authService";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import { toLocalDateKey } from "../utils/dates";
+import { formatDateLabel, formatTime12, formatDecimalHours, statusTone } from "../utils/format";
 import "../styles/App.css";
 import "../styles/EmployeeAttendance.css";
 
@@ -262,13 +263,15 @@ const EmployeeAttendance = () => {
           <div className="ea-attendance-actions">
             <button
               type="button"
+              className="ea-btn ea-btn-primary"
               onClick={() => handleAttendanceAction("checkIn")}
               disabled={actionLoading || todayStatus?.status !== "not_checked_in"}
             >
-              {actionLoading ? "Working..." : "Check in"}
+              {actionLoading ? "Working…" : "Check in"}
             </button>
             <button
               type="button"
+              className="ea-btn ea-btn-secondary"
               onClick={() => handleAttendanceAction("checkOut")}
               disabled={actionLoading || todayStatus?.status !== "checked_in"}
             >
@@ -280,11 +283,11 @@ const EmployeeAttendance = () => {
         {/* Summary Cards */}
         <div className="ea-summary-cards">
           <div className="ea-card">
-            <div className="ea-card-title">Count of days present</div>
+            <div className="ea-card-title">Days present</div>
             <div className="ea-card-value">{summary.presentDays}</div>
           </div>
           <div className="ea-card">
-            <div className="ea-card-title">Leaves count</div>
+            <div className="ea-card-title">Approved leaves</div>
             <div className="ea-card-value">{summary.leavesCount}</div>
           </div>
           <div className="ea-card">
@@ -328,27 +331,15 @@ const EmployeeAttendance = () => {
               <tbody>
                 {records.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan="5"
-                      style={{
-                        textAlign: "center",
-                        padding: "40px",
-                        color: "#999",
-                      }}
-                    >
+                    <td colSpan="5" className="ea-empty-cell">
                       No attendance records for {monthYearString()}
                     </td>
                   </tr>
                 ) : (
                   records.map((record) => {
-                    const recordDate = new Date(
-                      record.date || record.day || record.attendance_date
-                    );
-                    const dateStr = recordDate.toLocaleDateString("en-GB"); // DD/MM/YYYY format
-                    const checkIn =
-                      record.check_in_time || record.checkIn || "--:--";
-                    const checkOut =
-                      record.check_out_time || record.checkOut || "--:--";
+                    const dateKey =
+                      record.attendance_date ||
+                      String(record.date || record.day || "").slice(0, 10);
                     const workHours = record.total_hours || 0;
                     const extraHours = Math.max(
                       0,
@@ -357,18 +348,22 @@ const EmployeeAttendance = () => {
 
                     return (
                       <tr key={record.attendance_id || record.id}>
-                        <td>{dateStr}</td>
-                        <td>{checkIn}</td>
-                        <td>{checkOut}</td>
+                        <td>{formatDateLabel(dateKey)}</td>
+                        <td>
+                          {formatTime12(record.checkIn ?? record.check_in_time)}
+                        </td>
+                        <td>
+                          {formatTime12(record.checkOut ?? record.check_out_time)}
+                        </td>
                         <td>
                           {workHours
-                            ? parseFloat(workHours).toFixed(2)
-                            : "00:00"}
+                            ? formatDecimalHours(workHours)
+                            : "--"}
                         </td>
                         <td>
                           {extraHours > 0
-                            ? parseFloat(extraHours).toFixed(2)
-                            : "00:00"}
+                            ? formatDecimalHours(extraHours)
+                            : "--"}
                         </td>
                       </tr>
                     );

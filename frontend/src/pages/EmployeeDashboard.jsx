@@ -19,6 +19,21 @@ import Header from "../components/Header";
 import { formatLocalDate } from "../utils/dates";
 import { formatDateLabel, formatTime12, statusTone } from "../utils/format";
 
+const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** 10 -> "Oct"; backend payroll rows carry numeric months. */
+const formatMonthLabel = (month) => MONTH_NAMES[Number(month) - 1] ?? month;
+
+/** Indian-rupee display for payroll amounts (display-only formatting). */
+const formatRupees = (value) => {
+  const amount = Number(value);
+  if (Number.isNaN(amount)) return "-";
+  return `₹${new Intl.NumberFormat("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount)}`;
+};
+
 const Card = ({ title, children, loading, error }) => (
   <div className="employee-dashboard-card">
     <h3 className="employee-dashboard-card-title">{title}</h3>
@@ -217,7 +232,8 @@ const EmployeeDashboard = () => {
                   {leaveBalance.map((row) => (
                     <li key={row.balance_id ?? row.leave_type_id}>
                       <strong>{row.leave_type_name}</strong>:{" "}
-                      {row.balance_days ?? row.balance} day(s) left
+                      {Number(row.remaining_days ?? row.balance_days ?? row.balance ?? 0)}{" "}
+                      day(s) left
                     </li>
                   ))}
                 </ul>
@@ -323,9 +339,11 @@ const EmployeeDashboard = () => {
                     {recentPayroll.map((row) => (
                       <tr key={row.payroll_id}>
                         <td>
-                          {String(row.month).padStart(2, "0")}/{row.year}
+                          {formatMonthLabel(row.month)} {row.year}
                         </td>
-                        <td>{row.net_salary ?? row.net_pay ?? "-"}</td>
+                        <td>
+                          {formatRupees(row.net_salary ?? row.net_pay)}
+                        </td>
                         <td>
                           <span
                             className={`status-pill ${statusTone(row.payment_status ?? row.status)}`}

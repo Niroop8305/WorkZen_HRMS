@@ -175,16 +175,74 @@ const TimeOff = () => {
         </div>}
       </main>
 
-      {showForm && <div className="modal-overlay" onClick={() => setShowForm(false)}><div className="modal-content" onClick={(event) => event.stopPropagation()}>
-        <div className="modal-header"><h2>New Leave Request</h2><button onClick={() => setShowForm(false)}>×</button></div>
-        <form onSubmit={submitLeave}>
-          <label>Leave Type<select required value={form.leave_type_id} onChange={(event) => setForm({ ...form, leave_type_id: event.target.value })}><option value="">Select leave type</option>{types.map((type) => <option key={type.leave_type_id} value={type.leave_type_id}>{type.leave_type_name}</option>)}</select></label>
-          <label>Start Date<input required type="date" value={form.start_date} onChange={(event) => setForm({ ...form, start_date: event.target.value })} /></label>
-          <label>End Date<input required type="date" value={form.end_date} onChange={(event) => setForm({ ...form, end_date: event.target.value })} /></label>
-          <label>Reason<textarea required value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })} /></label>
-          <button className="btn-submit" disabled={submitting}>{submitting ? "Submitting..." : "Submit Leave"}</button>
-        </form>
-      </div></div>}
+      {showForm && (
+        <div className="modal-overlay" onClick={() => setShowForm(false)}>
+          <div className="modal-content" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-header">
+              <h2>New Leave Request</h2>
+              <button className="modal-close" onClick={() => setShowForm(false)} aria-label="Close">×</button>
+            </div>
+            <form onSubmit={submitLeave}>
+              <div className="form-group">
+                <label htmlFor="leave-type">Leave type</label>
+                <select
+                  id="leave-type"
+                  required
+                  value={form.leave_type_id}
+                  onChange={(event) => setForm({ ...form, leave_type_id: event.target.value })}
+                >
+                  <option value="">Select leave type</option>
+                  {types.map((type) => (
+                    <option key={type.leave_type_id} value={type.leave_type_id}>
+                      {type.leave_type_name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="leave-start">Start date</label>
+                  <input
+                    id="leave-start"
+                    required
+                    type="date"
+                    value={form.start_date}
+                    onChange={(event) => setForm({ ...form, start_date: event.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="leave-end">End date</label>
+                  <input
+                    id="leave-end"
+                    required
+                    type="date"
+                    value={form.end_date}
+                    onChange={(event) => setForm({ ...form, end_date: event.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label htmlFor="leave-reason">Reason</label>
+                <textarea
+                  id="leave-reason"
+                  required
+                  value={form.reason}
+                  placeholder="Briefly describe the reason for your leave"
+                  onChange={(event) => setForm({ ...form, reason: event.target.value })}
+                />
+              </div>
+              <div className="modal-actions">
+                <button type="button" className="btn-cancel" onClick={() => setShowForm(false)}>
+                  Cancel
+                </button>
+                <button className="btn-submit" disabled={submitting}>
+                  {submitting ? "Submitting…" : "Submit Leave"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
