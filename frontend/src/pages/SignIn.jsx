@@ -65,10 +65,13 @@ const SignIn = () => {
       if (result.success) {
         // Redirect based on role
         const role = result.data.role;
-        if (role === "Admin" || role === "HR Officer") {
-          navigate("/dashboard");
-        } else {
+        if (role === "Employee") {
           navigate("/employee/dashboard");
+        } else {
+          // Admin, HR Officer and Payroll Officer all share the staff directory
+          // dashboard; sending a Payroll Officer to the employee dashboard
+          // would bounce off its Employee-only guard into the 403 page.
+          navigate("/dashboard");
         }
       } else {
         setError(result.message || "Login failed");

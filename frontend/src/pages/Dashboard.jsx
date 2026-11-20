@@ -77,12 +77,18 @@ const Dashboard = () => {
   useEffect(() => {
     fetchEmployees();
     fetchAttendanceStatus();
-    fetchActiveLeaves();
+    // Org-wide leave indicators are Admin/HR scope; a Payroll Officer must not
+    // fire a guaranteed 403 on every dashboard load (same policy as T-016).
+    if (user?.role !== "Payroll Officer") {
+      fetchActiveLeaves();
+    }
 
     // Refresh attendance status every 30 seconds
     const interval = setInterval(() => {
       fetchAttendanceStatus();
-      fetchActiveLeaves();
+      if (user?.role !== "Payroll Officer") {
+        fetchActiveLeaves();
+      }
       if (employees.length > 0) {
         fetchAllEmployeesAttendance(employees);
       }
