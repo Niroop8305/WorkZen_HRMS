@@ -160,9 +160,10 @@
 
 .payroll-table {
   width: 100%;
-  min-width: 1080px; /* keep 11 columns legible; wrapper scrolls below this */
+  /* No fixed min-width: the table must COMPRESS to the available width so the
+     Actions column is never cut. Numeric columns use tabular figures. */
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .payroll-table thead {
@@ -171,18 +172,24 @@
 
 .payroll-table th {
   text-align: left;
-  padding: 14px 16px;
+  padding: 12px 8px;
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .payroll-table td {
-  padding: 14px 16px;
+  padding: 12px 8px;
   border-top: 1px solid rgba(148, 163, 184, 0.12);
   color: var(--text-primary);
   vertical-align: middle;
+}
+
+.payroll-table td.text-right,
+.payroll-table th.text-right {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .payroll-table tbody tr:hover {
@@ -196,6 +203,10 @@
 
 .text-right {
   text-align: right;
+}
+
+.payroll-table td:first-child {
+  max-width: 86px;
 }
 
 .cell-description {
@@ -217,13 +228,19 @@
 .employee-sub {
   font-size: 12px;
   color: var(--text-secondary);
+  max-width: 150px;
 }
 
 .row-actions {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: flex-end;
+  flex-direction: row;
+  flex-wrap: wrap;          /* lets Apply/status-control drop a line when the
+                               window is tight, instead of overflowing the edge */
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  max-width: 280px;
+  margin-left: auto;
 }
 
 .row-actions .btn-view-payslip,
@@ -232,19 +249,26 @@
   white-space: nowrap;
 }
 
+.row-actions .btn-view-payslip {
+  padding: 7px 10px;
+  font-size: 12.5px;
+}
+
+/* Status pills */
 /* Status pills */
 .status-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 4px 12px;
+  padding: 3px 10px;
   border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
   background: rgba(148, 163, 184, 0.2);
   color: var(--text-primary);
+  white-space: nowrap;
 }
 
 .status-paid {
@@ -281,8 +305,9 @@
   border-radius: var(--radius-md);
   color: var(--text-primary);
   padding: 6px 8px;
-  font-size: 13px;
-  max-width: 150px;
+  font-size: 12.5px;
+  max-width: 110px;
+  text-overflow: ellipsis;
 }
 
 .status-final {
