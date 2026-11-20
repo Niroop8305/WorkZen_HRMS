@@ -60,7 +60,7 @@ Copy `.env.example` in each app and fill real values. **Never commit `.env`.**
 cd backend
 npm install
 cp .env.example .env          # fill DB_* + JWT_SECRET
-npm run init-db               # schema → procedures → triggers → migrations → verify
+npm run init-db               # schema → procedures → triggers → migrations (incl. profile columns) → verify
 npm run seed:demo             # optional demo accounts + benchmark dataset (dev only)
 npm run dev                   # http://localhost:5000
 ```
@@ -96,6 +96,12 @@ npm run migrate:auth-throttle
 npm run migrate:leave-cancellation
 npm run migrate:salary-components
 npm run migrate:user-sessions
+
+# Employee-profile columns (Private Info / Salary Info / Resume tabs and the
+# manager field). Also applied automatically by `npm run init-db`.
+npm run migrate:additional-fields
+npm run migrate:resume-fields
+npm run migrate:manager-field
 
 # Verify everything before starting the server
 npm run init-db               # verification-only pass on an initialized DB

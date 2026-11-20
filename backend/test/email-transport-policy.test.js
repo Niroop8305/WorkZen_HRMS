@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import dns from "node:dns";
 import net from "node:net";
 import tls from "node:tls";
-import { after, describe, it } from "node:test";
+import { after, before, describe, it } from "node:test";
 import nodemailer from "nodemailer";
 
 // HIGH-4 P1 mail policy suite.
@@ -27,12 +27,12 @@ const networkAttempts = [];
 // The suite must be runnable under a caller that already exports EMAIL_DRY_RUN
 // (npm test does), so it records what the environment was and promises to hand it
 // back unchanged instead of promising to clear it.
-const AMBIENT_ENV = {
-  EMAIL_DRY_RUN: process.env.EMAIL_DRY_RUN,
-  EMAIL_FORCE_FAIL: process.env.EMAIL_FORCE_FAIL,
-  EMAIL_USER: process.env.EMAIL_USER,
-  EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
-};
+// Snapshot of the caller's mail environment. Captured in a before() hook —
+// NOT at module scope — because imported modules call dotenv.config(), which
+// populates absent variables from .env after module load; a module-scope
+// snapshot would then compare against a pre-dotenv view and fail even though
+// the suite restored everything it touched.
+let AMBIENT_ENV = null;
 
 const realCreateTransport = nodemailer.createTransport;
 const realSocketConnect = net.Socket.prototype.connect;
@@ -70,6 +70,10 @@ dns.lookup = tripwire("dns.lookup");
 // createTransport when it is evaluated.
 const authMail = await import("../src/config/email.js");
 const staffMail = await import("../src/services/emailService.js");
+// Imported up front (not inside a test): the routes transitively import
+// middleware/auth -> config/database -> dotenv.config(), which would otherwise
+// mutate the environment mid-suite, after the ambient snapshot was taken.
+const emailRoutes = (await import("../src/routes/emailRoutes.js")).default;
 
 const RECIPIENT = "policy-probe@example.test";
 const CODE = "123456";
@@ -149,6 +153,15 @@ const resetRecords = () => {
 };
 
 describe("mail transport policy", () => {
+  before(() => {
+    AMBIENT_ENV = {
+      EMAIL_DRY_RUN: process.env.EMAIL_DRY_RUN,
+      EMAIL_FORCE_FAIL: process.env.EMAIL_FORCE_FAIL,
+      EMAIL_USER: process.env.EMAIL_USER,
+      EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
+    };
+  });
+
   it("never constructs an SMTP transport or touches the network when EMAIL_DRY_RUN=true", async () => {
     await withEnv(
       {
@@ -396,7 +409,7 @@ describe("mail transport policy", () => {
     // Reached past `protect` on purpose: this case is about what the handler does
     // to the mail transport and what it puts on the wire, not about RBAC (that is
     // covered by the authorization suites).
-    const route = (await import("../src/routes/emailRoutes.js")).default.stack.find(
+    const route = emailRoutes.stack.find(
       (layer) => layer.route?.path === "/test",
     );
     assert.ok(route, "the /test route is mounted");

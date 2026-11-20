@@ -277,8 +277,9 @@ These are the only mounted payroll routes. The legacy payroll world
 decommissioned in Payroll Milestone 1 and now returns a deliberate `404`. Its
 backing tables (`payroll_employees`, `payroll_payslips`, `payroll_payruns`,
 `payroll_attendance`) do not exist in the live database and must not be
-recreated. `src/database/payroll_schema.sql` and `payslips_migration.sql` are
-retained as deprecated historical documentation only — never execute them.
+recreated. Their historical DDL files (`payroll_schema.sql`,
+`payslips_migration.sql`) were removed in the deployment cleanup — they must
+never be recreated.
 
 Payroll is functionally complete: salary components, effective-dated salary
 structures with overlap/as-of handling, a single transaction-safe calculation

@@ -206,10 +206,10 @@ approved scratch schema (`DB_NAME=workzen_hrms_test ALLOW_SCRATCH_DB=1`).
 
 | Suite | Command | Latest verified result |
 |---|---|---|
-| Backend unit/integration (25 files) | `npm test` (with scratch DB) | **398 tests / 0 failed** |
+| Backend unit/integration (27 files) | `npm test` (with scratch DB) | **415 tests / 0 failed** |
 | DB-free gate (no database required) | `npm run test:dbfree` | **202 tests / 0 failed** |
 | HTTP integration (13 suites: auth, session, reset, attendance, leave, leave-performance, payroll, payroll-generation, payslip, salary, profile, directory, demo-dataset) | `npm run test:*:http` with `*_API_URL` env vars | **252 tests / 0 failed** |
-| Frontend (Vitest + Testing Library) | `cd frontend && npm test` | **10 tests / 0 failed** |
+| Frontend (Vitest + Testing Library) | `cd frontend && npm test` | **33 tests / 0 failed** |
 
 HTTP suites are env-gated (`LEAVE_API_URL`, `PAYROLL_API_URL`, `PAYSLIP_API_URL`,
 `PROFILE_API_URL`, `SESSION_API_URL`, `AUTH_API_URL`, `ATTENDANCE_API_URL`,

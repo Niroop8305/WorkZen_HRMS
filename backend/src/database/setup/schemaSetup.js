@@ -7,6 +7,9 @@ import { migrateSalaryComponents } from "../migrate-salary-components.js";
 import { migrateUserSessions } from "../migrate-user-sessions.js";
 import { migrateLeaveCancellation } from "../migrate-leave-cancellation.js";
 import { migrateAuthThrottle } from "../migrate-auth-throttle.js";
+import { migrateAdditionalFields } from "../migrate-additional-fields.js";
+import { migrateResumeFields } from "../migrate-resume-fields.js";
+import { migrateManagerField } from "../migrate-manager-field.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const databaseDir = path.resolve(__dirname, "..");
@@ -122,6 +125,36 @@ export const migrationSteps = [
     run: async (connection, schema) => {
       await migrateLeaveCancellation(connection, schema);
       return { detail: "trigger reinstalled" };
+    },
+  },
+  {
+    // Profile/HR columns the application writes (Private Info, Salary Info,
+    // Resume tabs). schema.sql does not define them; without these steps a
+    // fresh database would 500 on the first profile update.
+    id: "employee-profile-additional-fields",
+    title: "employee_profiles private/salary info columns",
+    requires: ["employee_profiles"],
+    run: async (connection, schema) => {
+      const { added } = await migrateAdditionalFields(connection);
+      return { detail: added.length === 0 ? "already present" : `added: ${added.join(", ")}` };
+    },
+  },
+  {
+    id: "employee-profile-resume-fields",
+    title: "employee_profiles resume columns (skills JSON init)",
+    requires: ["employee_profiles"],
+    run: async (connection, schema) => {
+      const { added } = await migrateResumeFields(connection);
+      return { detail: added.length === 0 ? "already present" : `added: ${added.join(", ")}` };
+    },
+  },
+  {
+    id: "employee-profile-manager-field",
+    title: "employee_profiles.manager display field",
+    requires: ["employee_profiles"],
+    run: async (connection, schema) => {
+      const { added } = await migrateManagerField(connection);
+      return { detail: added ? "column added" : "already present" };
     },
   },
 ];
