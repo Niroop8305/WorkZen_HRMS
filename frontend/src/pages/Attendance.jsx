@@ -6,6 +6,7 @@ import { toLocalDateKey } from "../utils/dates";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import { formatTime12, formatDecimalHours, statusTone } from "../utils/format";
+import { Download } from "lucide-react";
 import "../styles/App.css";
 import "../styles/Attendance.css";
 
@@ -339,8 +340,12 @@ const Attendance = () => {
                 value={adminFilters.endDate}
                 onChange={(event) => updateAdminFilter("endDate", event.target.value)}
               />
-              <button type="button" onClick={exportAdminAttendance}>
-                Export CSV
+              <button
+                type="button"
+                className="attendance-export-btn"
+                onClick={exportAdminAttendance}
+              >
+                <Download size={15} aria-hidden="true" /> Export CSV
               </button>
             </div>
           )}
@@ -365,7 +370,7 @@ const Attendance = () => {
           {!loading && view === "day" && (
             <div className="data-table-wrapper">
               <div className="date-display">
-                {`${date.getDate()}, ${date.toLocaleDateString("en-US", {
+                {`${date.getDate()} ${date.toLocaleDateString("en-US", {
                   month: "long",
                 })} ${date.getFullYear()}`}
               </div>
