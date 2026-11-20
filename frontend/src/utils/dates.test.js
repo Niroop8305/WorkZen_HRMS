@@ -42,4 +42,16 @@ describe("toLocalDateKey (D-6)", () => {
     expect(formatLocalDate(IST_EARLY_MORNING)).toContain("Nov 2026");
     expect(formatLocalDate(IST_EARLY_MORNING)).toMatch(/^20 Nov 2026$/);
   });
+
+  // Regression: an attendance row with a missing/unparseable date used to
+  // crash EmployeeDashboard with "RangeError: Invalid time value" because
+  // toLocalDateKey(new Date(undefined)) reached Intl.formatToParts.
+  it("returns an empty string instead of throwing for invalid dates", () => {
+    expect(() => toLocalDateKey(new Date(undefined))).not.toThrow();
+    expect(toLocalDateKey(new Date(undefined))).toBe("");
+    expect(() => toLocalDateKey(new Date("not-a-date"))).not.toThrow();
+    expect(toLocalDateKey(new Date("not-a-date"))).toBe("");
+    expect(() => formatLocalDate(new Date(undefined))).not.toThrow();
+    expect(formatLocalDate(new Date(undefined))).toBe("");
+  });
 });

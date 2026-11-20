@@ -16,8 +16,11 @@ const PARTS_FORMATTER = new Intl.DateTimeFormat("en-CA", {
 /**
  * The YYYY-MM-DD key for `date` (defaults to now) as the business timezone's
  * wall clock names it — never shifted by the host's or UTC's offset.
+ * Invalid/absent dates yield "" instead of throwing: a bad API row must never
+ * take down the page that renders it.
  */
 export const toLocalDateKey = (date = new Date()) => {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
   const parts = PARTS_FORMATTER.formatToParts(date);
   const get = (type) => parts.find((part) => part.type === type)?.value;
   return `${get("year")}-${get("month")}-${get("day")}`;
@@ -30,11 +33,14 @@ export const todayLocalKey = () => toLocalDateKey(new Date());
 
 /**
  * Human label, e.g. "19 Nov 2026", in the business timezone.
+ * Invalid/absent dates yield "" instead of throwing.
  */
-export const formatLocalDate = (date = new Date()) =>
-  new Intl.DateTimeFormat("en-GB", {
+export const formatLocalDate = (date = new Date()) => {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-GB", {
     timeZone: BUSINESS_TIMEZONE,
     day: "2-digit",
     month: "short",
     year: "numeric",
   }).format(date);
+};

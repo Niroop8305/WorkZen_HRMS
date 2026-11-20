@@ -16,7 +16,8 @@ import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
-import { formatLocalDate, toLocalDateKey } from "../utils/dates";
+import { formatLocalDate } from "../utils/dates";
+import { formatDateLabel } from "../utils/format";
 
 const Card = ({ title, children, loading, error }) => (
   <div className="employee-dashboard-card">
@@ -256,7 +257,7 @@ const EmployeeDashboard = () => {
                   <tbody>
                     {recentLogs.slice(0, 5).map((row) => (
                       <tr key={row.attendance_id ?? row.business_date}>
-                        <td>{toLocalDateKey(new Date(row.business_date))}</td>
+                        <td>{formatDateLabel(row.attendance_date ?? row.business_date)}</td>
                         <td>{row.status ?? "-"}</td>
                         <td>
                           {row.check_in_time

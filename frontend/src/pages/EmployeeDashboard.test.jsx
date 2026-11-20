@@ -3,7 +3,7 @@
 // /leave/active-leaves) is a regression — it would 403 in the console again.
 
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { cleanup, render, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import EmployeeDashboard from "../pages/EmployeeDashboard.jsx";
 
 vi.mock("../services/api", () => ({ default: { get: vi.fn(), post: vi.fn() } }));
@@ -76,5 +76,40 @@ describe("EmployeeDashboard endpoint guard (D-2)", () => {
     const { getByText } = render(<EmployeeDashboard />);
     await waitFor(() => getByText(/Welcome, Priya/i));
     expect(getByText(/Check In/)).toBeInTheDocument();
+  });
+
+  // Regression: my-logs rows carry attendance_date (NOT business_date). The
+  // old mapping `toLocalDateKey(new Date(row.business_date))` built an Invalid
+  // Date and crashed the whole dashboard with "RangeError: Invalid time value"
+  // as soon as the employee had any attendance history.
+  it("renders recent attendance rows with real dates without crashing", async () => {
+    api.get.mockImplementation((url) => {
+      if (url === "/attendance/my-logs") {
+        return ok([
+          {
+            attendance_id: 1,
+            attendance_date: "2026-10-30", // real backend field
+            check_in_time: "2026-10-30 09:05:00",
+            check_out_time: null,
+            status: "Present",
+          },
+        ]);
+      }
+      if (url === "/dashboard/my-stats") {
+        return ok({
+          attendance_summary: { present_days: 1, worked_minutes: 100 },
+          leave_balance: [],
+          pending_leaves: [],
+          recent_payroll: [],
+        });
+      }
+      return ok([]);
+    });
+
+    render(<EmployeeDashboard />);
+    await waitFor(() =>
+      expect(screen.getByText("30 Oct 2026")).toBeInTheDocument(),
+    );
+    expect(screen.getByText("--:--")).toBeInTheDocument(); // null check-out
   });
 });
