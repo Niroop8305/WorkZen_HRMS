@@ -17,7 +17,7 @@ import api from "../services/api";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import { formatLocalDate } from "../utils/dates";
-import { formatDateLabel } from "../utils/format";
+import { formatDateLabel, formatTime12, statusTone } from "../utils/format";
 
 const Card = ({ title, children, loading, error }) => (
   <div className="employee-dashboard-card">
@@ -135,7 +135,7 @@ const EmployeeDashboard = () => {
     <div className="dashboard-container">
       <Sidebar activeSection="dashboard" />
       <div className="dashboard-main">
-        <Header onLogout={handleLogout} />
+        <Header title="My Dashboard" subtitle="Your day at a glance — attendance, leave and payslips" />
         <div className="dashboard-content">
           <div className="employee-dashboard-header">
             <div>
@@ -180,10 +180,10 @@ const EmployeeDashboard = () => {
                   </p>
                   <p className="employee-dashboard-detail">
                     {attendance.check_in_time
-                      ? `In at ${String(attendance.check_in_time).slice(0, 5)}`
+                      ? `In at ${formatTime12(attendance.checkIn ?? attendance.check_in_time)}`
                       : "No check-in recorded yet today."}
                     {attendance.check_out_time
-                      ? ` · Out at ${String(attendance.check_out_time).slice(0, 5)}`
+                      ? ` · Out at ${formatTime12(attendance.checkOut ?? attendance.check_out_time)}`
                       : ""}
                   </p>
                 </>
@@ -231,8 +231,8 @@ const EmployeeDashboard = () => {
                 <ul className="employee-dashboard-list">
                   {pendingLeaves.slice(0, 3).map((leave) => (
                     <li key={leave.application_id ?? leave.leave_id}>
-                      {leave.leave_type_name}: {leave.start_date} →{" "}
-                      {leave.end_date}
+                      {leave.leave_type_name}: {formatDateLabel(leave.start_date)} –{" "}
+                      {formatDateLabel(leave.end_date)}
                     </li>
                   ))}
                 </ul>
@@ -258,16 +258,16 @@ const EmployeeDashboard = () => {
                     {recentLogs.slice(0, 5).map((row) => (
                       <tr key={row.attendance_id ?? row.business_date}>
                         <td>{formatDateLabel(row.attendance_date ?? row.business_date)}</td>
-                        <td>{row.status ?? "-"}</td>
                         <td>
-                          {row.check_in_time
-                            ? String(row.check_in_time).slice(0, 5)
-                            : "--:--"}
+                          <span className={`status-pill ${statusTone(row.status)}`}>
+                            {row.status ?? "—"}
+                          </span>
                         </td>
                         <td>
-                          {row.check_out_time
-                            ? String(row.check_out_time).slice(0, 5)
-                            : "--:--"}
+                          {formatTime12(row.checkIn ?? row.check_in_time)}
+                        </td>
+                        <td>
+                          {formatTime12(row.checkOut ?? row.check_out_time)}
                         </td>
                       </tr>
                     ))}
@@ -293,9 +293,13 @@ const EmployeeDashboard = () => {
                       <tr key={leave.application_id ?? leave.leave_id}>
                         <td>{leave.leave_type_name ?? leave.leave_type}</td>
                         <td>
-                          {leave.start_date} → {leave.end_date}
+                          {formatDateLabel(leave.start_date)} – {formatDateLabel(leave.end_date)}
                         </td>
-                        <td>{leave.status}</td>
+                        <td>
+                          <span className={`status-pill ${statusTone(leave.status)}`}>
+                            {leave.status ?? "—"}
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -321,8 +325,14 @@ const EmployeeDashboard = () => {
                         <td>
                           {String(row.month).padStart(2, "0")}/{row.year}
                         </td>
-                        <td>{row.net_pay ?? "-"}</td>
-                        <td>{row.payment_status ?? row.status ?? "-"}</td>
+                        <td>{row.net_salary ?? row.net_pay ?? "-"}</td>
+                        <td>
+                          <span
+                            className={`status-pill ${statusTone(row.payment_status ?? row.status)}`}
+                          >
+                            {row.payment_status ?? row.status ?? "—"}
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

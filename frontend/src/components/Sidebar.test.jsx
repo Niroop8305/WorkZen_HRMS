@@ -50,6 +50,7 @@ describe("Sidebar", () => {
     authState.user = { role: "Employee", email: "emp@workzen.demo" };
     renderSidebar();
     const items = labels();
+    expect(items[0]).toBe("Dashboard"); // their own dashboard, first in nav
     expect(items).not.toContain("Employees");
     expect(items).not.toContain("Reports");
     expect(items).toContain("Attendance");

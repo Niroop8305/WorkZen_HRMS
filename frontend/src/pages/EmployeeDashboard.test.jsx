@@ -111,5 +111,7 @@ describe("EmployeeDashboard endpoint guard (D-2)", () => {
       expect(screen.getByText("30 Oct 2026")).toBeInTheDocument(),
     );
     expect(screen.getByText("--:--")).toBeInTheDocument(); // null check-out
+    // Times must be 12-hour formatted, never the raw "2026-" slice bug.
+    expect(screen.getByText("09:05 AM")).toBeInTheDocument();
   });
 });

@@ -1568,27 +1568,39 @@ body {
   margin-bottom: 24px;
 }
 
+/* Dark-slate cards (were light-theme #fff leftovers rendered under white
+   text — unreadable). Re-themed onto the design system tokens. */
 .employee-dashboard-card {
-  background: #fff;
-  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
   padding: 18px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: none;
+  color: var(--text-primary);
+  transition: border-color 120ms ease;
+}
+
+.employee-dashboard-card:hover {
+  border-color: rgba(99, 102, 241, 0.3);
 }
 
 .employee-dashboard-card-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #555;
-  margin-bottom: 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 12px;
 }
 
 .employee-dashboard-big {
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .employee-dashboard-detail {
-  color: #777;
+  color: var(--text-muted);
   font-size: 13px;
   margin-top: 6px;
 }
@@ -1597,11 +1609,22 @@ body {
   list-style: none;
   padding: 0;
   margin: 0;
-  font-size: 14px;
+  font-size: 13.5px;
+  color: #e2e8f0;
 }
 
 .employee-dashboard-list li {
-  padding: 4px 0;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.employee-dashboard-list li:last-child {
+  border-bottom: none;
+}
+
+.employee-dashboard-list strong {
+  color: var(--text-primary);
+  font-weight: 600;
 }
 
 .employee-dashboard-table {
@@ -1610,15 +1633,30 @@ body {
   font-size: 13px;
 }
 
-.employee-dashboard-table th,
+.employee-dashboard-table th {
+  text-align: left;
+  padding: 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-strong);
+}
+
 .employee-dashboard-table td {
   text-align: left;
-  padding: 6px 8px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.07);
+  padding: 8px;
+  color: #e2e8f0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.employee-dashboard-table tbody tr:hover td {
+  background: rgba(148, 163, 184, 0.06);
 }
 
 .employee-dashboard-empty {
-  color: #8a8a8a;
+  color: var(--text-muted);
   font-size: 13px;
 }
 

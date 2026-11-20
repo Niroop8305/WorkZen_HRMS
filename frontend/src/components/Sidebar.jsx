@@ -16,6 +16,13 @@ import WorkZenLogo from "./WorkZenLogo";
 // actually open — no visible-but-403ing entries.
 const NAV_ITEMS = [
   {
+    id: "dashboard",
+    label: "Dashboard",
+    path: "/employee/dashboard",
+    icon: LayoutDashboard,
+    roles: ["Employee"],
+  },
+  {
     id: "employees",
     label: "Employees",
     path: "/dashboard",
