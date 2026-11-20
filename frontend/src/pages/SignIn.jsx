@@ -95,12 +95,7 @@ const SignIn = () => {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-logo">
-          <img
-            src="/odoo-logo.svg"
-            alt="Odoo Logo"
-            className="auth-logo-image"
-          />
-          <div className="auth-logo-subtitle">Powered by Odoo India</div>
+          <WorkZenLogo size={44} />
         </div>
 
         <h2 className="auth-title">Sign in to WorkZen</h2>

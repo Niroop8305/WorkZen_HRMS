@@ -1,30 +1,39 @@
 /* =====================================================
    WorkZen HRMS - Global Styles
-   Odoo Brand Colors: Purple (#714B67) and Gray (#878787)
+   Dark-slate enterprise design system. Legacy variable
+   names (--odoo-*) are preserved because dozens of rules
+   reference them; their values are the WorkZen indigo
+   palette now, so every consumer re-skins at once.
    ===================================================== */
 
 :root {
-  /* Odoo Brand Colors */
-  --odoo-purple: #714b67;
-  --odoo-purple-light: #8b5f83;
-  --odoo-purple-dark: #5a3c52;
-  --odoo-gray: #878787;
-  --odoo-gray-light: #a8a8a8;
-  --odoo-gray-dark: #666666;
+  /* Brand (kept under legacy names for compatibility) */
+  --odoo-purple: #6366f1;
+  --odoo-purple-light: #818cf8;
+  --odoo-purple-dark: #4f46e5;
+  --odoo-gray: #94a3b8;
+  --odoo-gray-light: #cbd5e1;
+  --odoo-gray-dark: #64748b;
 
-  /* Additional Colors */
+  /* Dark-slate enterprise palette */
   --white: #ffffff;
   --black: #1a1a1a;
-  --bg-dark: #0b0f14;
+  --bg-dark: #0b1120;
+  --bg-app: #0f172a;
   --bg-card: #111827;
-  --bg-elevated: #141c2b;
-  --border-color: #1f2a3d;
+  --bg-elevated: #1e293b;
+  --border-color: rgba(148, 163, 184, 0.14);
+  --border-strong: #334155;
   --input-bg: #0f172a;
+  --input-border: #334155;
   --text-primary: #f8fafc;
   --text-secondary: #cbd5f5;
-  --success: #4caf50;
-  --error: #f44336;
-  --warning: #ff9800;
+  --text-muted: #94a3b8;
+  --focus-ring: #6366f1;
+  --success: #10b981;
+  --error: #f43f5e;
+  --warning: #f59e0b;
+  --info: #38bdf8;
   --shadow-sm: 0 6px 16px rgba(15, 23, 42, 0.35);
   --shadow-lg: 0 24px 60px rgba(15, 23, 42, 0.5);
   --radius-sm: 8px;
@@ -1611,4 +1620,194 @@ body {
 .employee-dashboard-empty {
   color: #8a8a8a;
   font-size: 13px;
+}
+
+/* =====================================================
+   WorkZen design system additions (dark-slate enterprise)
+   ===================================================== */
+
+html,
+body {
+  color-scheme: dark;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+}
+
+/* ---- Global dark form controls: zero stark-white native inputs ---- */
+input,
+select,
+textarea,
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+input[type="search"] {
+  background: var(--input-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  padding: 0.55rem 0.85rem;
+  font: inherit;
+  color-scheme: dark;
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #64748b;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  border-color: var(--focus-ring);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.28);
+}
+
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.7rem center;
+  padding-right: 2rem;
+}
+
+textarea {
+  min-height: 84px;
+  resize: vertical;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--focus-ring);
+  padding: 0;
+}
+
+/* Keep compact inline inputs (payslip filters etc.) from ballooning */
+input[type="number"].compact,
+.salary-input,
+.salary-input-small,
+.pf-input {
+  padding: 0.35rem 0.6rem;
+}
+
+/* ---- Semantic status pill badges ---- */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.status-pill::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status-pill.positive {
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.status-pill.warning {
+  color: #fcd34d;
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.status-pill.negative {
+  color: #fda4af;
+  background: rgba(244, 63, 94, 0.12);
+  border-color: rgba(244, 63, 94, 0.25);
+}
+
+.status-pill.info {
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.25);
+}
+
+/* ---- Shared elevated card ---- */
+.wz-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+}
+
+/* ---- Sidebar active state (high contrast + indigo accent) ---- */
+.nav-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+
+.nav-item:hover {
+  color: #e2e8f0;
+  background: rgba(148, 163, 184, 0.08);
+}
+
+.nav-item.active {
+  color: #ffffff;
+  background: rgba(99, 102, 241, 0.16);
+}
+
+.nav-item.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #818cf8, #6366f1);
+}
+
+.nav-item svg {
+  flex: none;
+  opacity: 0.9;
+}
+
+.nav-item.active svg {
+  color: #a5b4fc;
+}
+
+/* ---- Header role pill ---- */
+.header-user-role {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #a5b4fc;
+  background: rgba(99, 102, 241, 0.14);
+  border: 1px solid rgba(99, 102, 241, 0.3);
 }

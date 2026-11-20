@@ -354,6 +354,12 @@ const Dashboard = () => {
             }}
           />
           <div className="header-right">
+            <div className="header-user-info" style={{ textAlign: "right" }}>
+              <span className="header-user-name" style={{ fontSize: "13px" }}>
+                {user?.profile?.full_name || user?.email || "User"}
+              </span>
+              <span className="header-user-role">{user?.role || ""}</span>
+            </div>
             <button
               className="btn-icon btn-status"
               onClick={handleCheckInOut}
