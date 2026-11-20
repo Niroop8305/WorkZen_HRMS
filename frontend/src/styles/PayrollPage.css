@@ -548,3 +548,19 @@
     padding: 18px;
   }
 }
+
+/* Search column needs room for its placeholder; minmax(180px,1fr) clipped it */
+.filter-search {
+  grid-column: span 2;
+  min-width: 260px;
+}
+
+.filter-search input {
+  width: 100%;
+}
+
+.filter-search input::placeholder {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

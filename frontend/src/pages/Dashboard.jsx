@@ -10,6 +10,30 @@ import Header from "../components/Header";
 
 const EMPLOYEES_PAGE_SIZE = 24;
 
+
+// Initials avatars: deterministic gradient pair per employee so the directory
+// no longer renders a wall of identical blue silhouettes.
+const AVATAR_TONES = ["indigo", "emerald", "sky", "amber", "rose", "violet"];
+
+const getEmployeeInitials = (employee) => {
+  const name = String(employee?.full_name || employee?.email || "?").trim();
+  const parts = name.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
+const avatarToneIndex = (employee) => {
+  const key = String(
+    employee?.employee_code || employee?.full_name || employee?.email || "",
+  );
+  let hash = 0;
+  for (let i = 0; i < key.length; i += 1) {
+    hash = (hash * 31 + key.charCodeAt(i)) % 100000;
+  }
+  return hash % AVATAR_TONES.length;
+};
+
 const Dashboard = () => {
   const { user, logout } = useAuth();
   // D-2: Employees have their own dashboard; landing here would fire
@@ -414,15 +438,11 @@ const Dashboard = () => {
                 <div className="employee-status-indicator">
                   {renderStatusIndicator(getEmployeeStatus(employee))}
                 </div>
-                <div className="employee-avatar">
-                  <svg width="85" height="85" viewBox="0 0 85 85">
-                    <rect width="85" height="85" fill="#4A90E2" rx="8" />
-                    <circle cx="42.5" cy="33" r="13" fill="white" />
-                    <path
-                      d="M 25 62 Q 25 50 42.5 50 Q 60 50 60 62 L 60 75 L 25 75 Z"
-                      fill="white"
-                    />
-                  </svg>
+                <div
+                  className={`employee-avatar avatar-gradient-${avatarToneIndex(employee)}`}
+                  aria-hidden="true"
+                >
+                  {getEmployeeInitials(employee)}
                 </div>
                 <div className="employee-info">
                   <span className="employee-name">
@@ -431,6 +451,9 @@ const Dashboard = () => {
                   {employee.employee_code && (
                     <span className="employee-code">
                       {employee.employee_code}
+                      {employee.department
+                        ? ` · ${employee.department}`
+                        : ""}
                     </span>
                   )}
                 </div>

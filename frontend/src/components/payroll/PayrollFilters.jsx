@@ -57,7 +57,7 @@ const PayrollFilters = ({ value, onChange, showStatus = false, showSearch = fals
           <input
             id="payroll-search"
             type="text"
-            placeholder="Filter loaded records by name, code, department"
+            placeholder="Filter by name, code, department"
             value={value.search}
             onChange={(e) => update({ search: e.target.value })}
           />

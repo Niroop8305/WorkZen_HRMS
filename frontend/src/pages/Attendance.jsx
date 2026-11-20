@@ -5,6 +5,7 @@ import api from "../services/api";
 import { toLocalDateKey } from "../utils/dates";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
+import { formatTime12, formatDecimalHours, statusTone } from "../utils/format";
 import "../styles/App.css";
 import "../styles/Attendance.css";
 
@@ -415,21 +416,25 @@ const Attendance = () => {
                           )}
                           {empName}
                         </td>
-                        <td>{r.checkIn || r.check_in_time || "--:--"}</td>
-                        <td>{r.checkOut || r.check_out_time || "--:--"}</td>
+                        <td>{formatTime12(r.checkIn || r.check_in_time)}</td>
+                        <td>{formatTime12(r.checkOut || r.check_out_time)}</td>
                         <td>
                           {workHours
-                            ? `${parseFloat(workHours).toFixed(2)}`
-                            : "00:00"}
+                            ? formatDecimalHours(workHours)
+                            : "--:--"}
                         </td>
                         {/* Column order must mirror the header: Work Hours,
                             Extra hours, Status. */}
                         <td>
                           {extraHours > 0
-                            ? `${parseFloat(extraHours).toFixed(2)}`
-                            : "00:00"}
+                            ? formatDecimalHours(extraHours)
+                            : "--"}
                         </td>
-                        <td>{r.status || "-"}</td>
+                        <td>
+                          <span className={`status-pill ${statusTone(r.status)}`}>
+                            {r.status || "—"}
+                          </span>
+                        </td>
                       </tr>
                     );
                   })}
@@ -513,20 +518,20 @@ const Attendance = () => {
                         <td>{dt.getDate()}</td>
                         <td>{dayName}</td>
                         <td>
-                          {record.checkIn || record.check_in_time || "--:--"}
+                          {formatTime12(record.checkIn || record.check_in_time)}
                         </td>
                         <td>
-                          {record.checkOut || record.check_out_time || "--:--"}
+                          {formatTime12(record.checkOut || record.check_out_time)}
                         </td>
                         <td>
                           {workHours
-                            ? `${parseFloat(workHours).toFixed(2)}`
-                            : "00:00"}
+                            ? formatDecimalHours(workHours)
+                            : "--:--"}
                         </td>
                         <td>
                           {extraHours > 0
-                            ? `${parseFloat(extraHours).toFixed(2)}`
-                            : "00:00"}
+                            ? formatDecimalHours(extraHours)
+                            : "--"}
                         </td>
                       </tr>
                     );

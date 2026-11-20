@@ -4,8 +4,16 @@ import { leaveService } from "../services/authService";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import "../styles/TimeOff.css";
+import { formatDateLabel, statusTone } from "../utils/format";
 
 const emptyForm = { leave_type_id: "", start_date: "", end_date: "", reason: "" };
+
+// "2026-10-30 to 2026-10-31" reads badly; a single-day leave reads worse.
+const formatLeaveDates = (start, end) => {
+  if (!start) return "-";
+  if (!end || end === start) return formatDateLabel(start);
+  return `${formatDateLabel(start)} – ${formatDateLabel(end)}`;
+};
 
 const TimeOff = () => {
   const { user } = useAuth();
@@ -147,13 +155,13 @@ const TimeOff = () => {
                 <tr key={request.leave_id}>
                   {isManager && <td>{request.employee_name || request.email}<br /><small>{request.employee_code} · {request.department}</small></td>}
                   <td>{request.leave_type_name || request.leave_type}</td>
-                  <td>{request.start_date} to {request.end_date}</td>
+                  <td>{formatLeaveDates(request.start_date, request.end_date)}</td>
                   <td>{request.total_days}</td>
                   <td>{request.reason}</td>
-                  <td><span className="status-badge">{request.status}</span></td>
+                  <td><span className={`status-pill ${statusTone(request.status)}`}>{request.status}</span></td>
                   <td>{request.rejection_reason || "-"}</td>
-                  {isManager && <td>{request.status === "Pending" && <><button onClick={() => updateStatus(request, "Approved")}>Approve</button><button onClick={() => updateStatus(request, "Rejected")}>Reject</button></>}</td>}
-                  {!isManager && ["Pending", "Approved"].includes(request.status) && <td><button onClick={() => cancelRequest(request)}>Cancel</button></td>}
+                  {isManager && <td>{request.status === "Pending" && <><button className="leave-approve-btn" onClick={() => updateStatus(request, "Approved")}>Approve</button><button className="leave-reject-btn" onClick={() => updateStatus(request, "Rejected")}>Reject</button></>}</td>}
+                  {!isManager && ["Pending", "Approved"].includes(request.status) && <td><button className="leave-cancel-btn" onClick={() => cancelRequest(request)}>Cancel</button></td>}
                 </tr>
               ))}</tbody>
             </table>

@@ -605,3 +605,45 @@
   border: 1px solid rgba(148, 163, 184, 0.14);
   box-shadow: var(--shadow-lg);
 }
+
+/* Semantic status pills + styled decision buttons */
+.leave-table .status-pill {
+  vertical-align: middle;
+}
+
+.leave-approve-btn,
+.leave-reject-btn,
+.leave-cancel-btn {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-right: 6px;
+  transition: filter 120ms ease, opacity 120ms ease;
+}
+
+.leave-approve-btn {
+  color: #6ee7b7;
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.leave-reject-btn {
+  color: #fda4af;
+  background: rgba(244, 63, 94, 0.12);
+  border-color: rgba(244, 63, 94, 0.3);
+}
+
+.leave-cancel-btn {
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.1);
+  border-color: rgba(148, 163, 184, 0.28);
+}
+
+.leave-approve-btn:hover,
+.leave-reject-btn:hover,
+.leave-cancel-btn:hover {
+  filter: brightness(1.2);
+}
