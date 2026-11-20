@@ -8,6 +8,7 @@ import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AttendanceRouter from "./components/AttendanceRouter";
 import SignIn from "./pages/SignIn";
+import LandingPage from "./pages/LandingPage";
 import Dashboard from "./pages/Dashboard";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
 import MyProfile from "./pages/MyProfile";
@@ -25,7 +26,9 @@ function App() {
         <div className="app-container">
           <Routes>
             {/* Public Routes */}
-            <Route path="/" element={<Navigate to="/login" />} />
+            {/* Public landing page; authenticated visitors are redirected to
+                their role dashboard by LandingPage itself. */}
+            <Route path="/" element={<LandingPage />} />
             <Route path="/login" element={<SignIn />} />
 
             {/* Protected Routes */}

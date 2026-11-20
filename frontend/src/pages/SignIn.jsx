@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import "../styles/App.css";
 
@@ -15,6 +15,11 @@ const SignIn = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Demo quick-fill only in development (or an explicitly enabled production
+  // build): baked-in credentials on a deployed login page are an incident.
+  const showDemoAccounts =
+    import.meta.env.DEV || import.meta.env.VITE_ENABLE_DEMO_LOGIN === "true";
 
   const demoAccounts = [
     {
@@ -98,6 +103,7 @@ const SignIn = () => {
           <WorkZenLogo size={44} />
         </div>
 
+        <Link to="/" className="auth-back-home">← Back to Home</Link>
         <h2 className="auth-title">Sign in to WorkZen</h2>
         <p className="auth-subtitle">
           Enter your work email and password to continue.
@@ -153,28 +159,26 @@ const SignIn = () => {
           </button>
         </form>
 
-        <div className="demo-accounts">
-          <div className="demo-title">Demo Accounts</div>
-          <ul className="demo-list">
-            {demoAccounts.map((account) => (
-              <li key={account.role}>
-                <div className="demo-info">
+        {showDemoAccounts && (
+          <div className="demo-accounts">
+            <div className="demo-title">Demo Accounts</div>
+            <div className="demo-grid">
+              {demoAccounts.map((account) => (
+                <div className="demo-cell" key={account.role}>
                   <span className="demo-role">{account.role}</span>
-                  <span className="demo-cred">
-                    {account.email} / {account.password}
-                  </span>
+                  <span className="demo-cred">{account.email}</span>
+                  <button
+                    type="button"
+                    className="demo-use-btn"
+                    onClick={() => handleUseDemo(account)}
+                  >
+                    Fill
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  className="demo-use-btn"
-                  onClick={() => handleUseDemo(account)}
-                >
-                  Use
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

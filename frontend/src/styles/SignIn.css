@@ -176,3 +176,39 @@
     background-color: var(--bg-card); /* Ensure card bg on mobile */
   }
 }
+
+/* Back link + compact 2x2 demo grid */
+.auth-back-home {
+  display: inline-block;
+  font-size: 12.5px;
+  color: #94a3b8;
+  text-decoration: none;
+  margin-bottom: 14px;
+}
+
+.auth-back-home:hover {
+  color: #e2e8f0;
+}
+
+.demo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.demo-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: rgba(148, 163, 184, 0.05);
+}
+
+.demo-cred {
+  font-size: 10.5px;
+  color: #64748b;
+  word-break: break-all;
+}
