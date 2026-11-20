@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import WorkZenLogo from "../components/WorkZenLogo";
+import "../styles/SignIn.css";
 import "../styles/App.css";
 
 const SignIn = () => {
