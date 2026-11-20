@@ -484,8 +484,14 @@ const MyProfile = () => {
 
   if (loading) {
     return (
-      <div className="profile-container">
-        <div className="loading">Loading profile...</div>
+      <div className="dashboard-layout">
+        <Sidebar activeSection="profile" />
+        <main className="dashboard-main">
+          <Header title="My Profile" subtitle="Your personal information and settings" />
+          <div className="profile-container">
+            <div className="loading">Loading profile...</div>
+          </div>
+        </main>
       </div>
     );
   }
@@ -496,6 +502,10 @@ const MyProfile = () => {
     user?.email;
 
   return (
+    <div className="dashboard-layout">
+      <Sidebar activeSection="profile" />
+      <main className="dashboard-main">
+        <Header title="My Profile" subtitle="Your personal information and settings" />
     <div className="profile-container">
       {/* Content Area */}
       <div className="profile-content">
@@ -1252,6 +1262,8 @@ const MyProfile = () => {
           )}
         </div>
       </div>
+    </div>
+        </main>
     </div>
   );
 };

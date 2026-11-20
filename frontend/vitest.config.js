@@ -10,5 +10,8 @@ export default defineConfig({
     globals: true,
     setupFiles: "./src/test/setup.js",
     include: ["src/**/*.test.{js,jsx}"],
+    // Windows EMFILE flake: transforming lucide-react's thousands of icon
+    // modules in parallel workers exhausts file handles. Serialize the files.
+    fileParallelism: false,
   },
 });

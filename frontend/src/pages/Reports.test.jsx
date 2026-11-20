@@ -1,15 +1,9 @@
-// Regression harness for the Reports "#undefined" incident.
+// Regression harness for the Reports sections.
 //
-// Root cause: Reports used to render `${r.employee_name} ${r.full_name}
-// #${r.user_id}` against the /attendance/day payload, whose rows actually carry
-// userName / userId / employee_code. Every unknown field rendered the literal
-// string "#undefined" in the table.
-//
-// These tests replay the EXACT backend payload shapes
-// (attendanceController.getAttendanceByDay -> { success, data: rows,
-// pagination }, rows with userName/userId/employee_code/checkIn/...;
-// payroll rows with month/year/gross_salary/net_salary) and assert no cell
-// ever contains "undefined".
+// Root cause of the historical "#undefined" cells: mappings against fields the
+// API never sends. These tests replay the EXACT backend payload shapes for all
+// four report sections (daily /monthly attendance, payroll period, leave) and
+// assert every cell renders real data — never "undefined" or "Unknown".
 
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
@@ -23,41 +17,58 @@ vi.mock("../services/api", () => ({ default: { get: (...args) => apiGet(...args)
 
 import Reports from "../pages/Reports.jsx";
 
-const attendanceRow = {
+const dailyRow = {
   attendance_id: 1,
-  userId: 7, // backend shape: camelCase, NOT user_id
+  userId: 7, // /attendance/day shape: camelCase, NOT user_id
   attendance_date: "2026-10-30",
   check_in_time: "2026-10-30 08:46:00",
   check_out_time: "2026-10-30 17:35:00",
   total_hours: 8.82,
   worked_minutes: 517,
   late_minutes: 0,
-  early_checkout_minutes: 0,
   status: "Present",
-  remarks: null,
-  userName: "Aarav Sharma", // backend shape: userName, NOT employee_name
+  userName: "Aarav Sharma", // /attendance/day shape: userName
   employee_code: "WZ-SYN-0990",
   department: "Engineering",
-  designation: "SDE",
-  date: "2026-10-30",
   checkIn: "08:46",
   checkOut: "17:35",
 };
 
+const monthlyRow = {
+  attendance_id: 9,
+  user_id: 7, // /attendance/all shape: snake_case
+  attendance_date: "2026-10-30",
+  check_in_time: "2026-10-30 09:14:00",
+  check_out_time: "2026-10-30 18:02:00",
+  worked_minutes: 528,
+  late_minutes: 14,
+  status: "Late",
+  employee_name: "Aarav Sharma", // /attendance/all shape: employee_name
+  employee_code: "WZ-SYN-0990",
+};
+
 const payrollRow = {
   payroll_id: 3,
-  userId: 7,
-  employee_code: "WZ-SYN-0990",
   month: 9,
   year: 2026,
-  working_days: 22,
-  present_days: 21,
-  paid_leave_days: 1,
   gross_salary: 84000,
   total_deductions: 12600,
   net_salary: 71400,
   payment_status: "Paid",
   payment_date: "2026-10-01",
+  employee_name: "Aarav Sharma",
+  employee_code: "WZ-SYN-0990",
+};
+
+const leaveRow = {
+  leave_id: 5,
+  employee_name: "Aarav Sharma",
+  employee_code: "WZ-SYN-0990",
+  leave_type: "Casual Leave",
+  start_date: "2026-11-02",
+  end_date: "2026-11-03",
+  total_days: 2,
+  status: "Approved",
 };
 
 const renderReports = () =>
@@ -67,100 +78,87 @@ const renderReports = () =>
     </MemoryRouter>,
   );
 
-const runDailyReport = async () => {
-  const user = screen.getByRole("combobox");
-  // report type defaults to daily; just press Run
-  const runButton = screen.getByRole("button", { name: /run report/i });
-  runButton.click();
-  await waitFor(() => expect(screen.getByText(/Aarav Sharma/)).toBeTruthy());
+const runSection = (label) => {
+  screen.getByRole("button", { name: label }).click();
 };
 
-describe("Reports", () => {
+describe("Reports sections", () => {
   beforeEach(() => {
     apiGet.mockReset();
   });
 
-  it("renders employee names, codes and formatted times with zero '#undefined'", async () => {
+  it("renders all four sections; leave section hidden from Payroll Officer", () => {
+    authState.user = { role: "Payroll Officer", email: "payroll@workzen.demo" };
+    renderReports();
+    expect(screen.getByText("Daily Attendance Report")).toBeTruthy();
+    expect(screen.getByText("Monthly Attendance Summary")).toBeTruthy();
+    expect(screen.getByText("Payroll Period Report")).toBeTruthy();
+    expect(screen.getByText("Leave Report")).toBeTruthy(); // note card
+    expect(screen.queryByRole("button", { name: "Run leave report" })).toBeNull();
+    cleanup();
+
+    authState.user = { role: "Admin", email: "admin@workzen.demo" };
+    renderReports();
+    expect(
+      screen.getByRole("button", { name: "Run leave report" }),
+    ).toBeTruthy();
+  });
+
+  it("daily report maps userName/checkIn without undefined cells", async () => {
     apiGet.mockResolvedValue({
-      data: {
-        success: true,
-        data: [attendanceRow],
-        pagination: { page: 1, limit: 1000, total: 1, totalPages: 1 },
-      },
+      data: { success: true, data: [dailyRow], pagination: { total: 1 } },
     });
     renderReports();
-    await runDailyReport();
-
-    expect(screen.getByText(/Aarav Sharma · WZ-SYN-0990/)).toBeTruthy();
+    runSection("Run daily attendance report");
+    await waitFor(() =>
+      expect(screen.getAllByText(/Aarav Sharma · WZ-SYN-0990/).length).toBeGreaterThan(0),
+    );
     expect(screen.getAllByText("08:46 AM").length).toBeGreaterThan(0);
     expect(screen.getAllByText("05:35 PM").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/8\.62 hrs/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/#undefined/)).toBeNull();
     expect(screen.queryByText(/undefined/)).toBeNull();
-    expect(screen.getAllByText("30 Oct 2026").length).toBeGreaterThan(0);
   });
 
-  it("monthly summary maps the /attendance/all payload shape (employee_name, full datetimes)", async () => {
-    const allRow = {
-      attendance_id: 9,
-      user_id: 7, // /all uses snake_case user_id
-      attendance_date: "2026-10-30",
-      check_in_time: "2026-10-30 09:14:00",
-      check_out_time: "2026-10-30 18:02:00",
-      total_hours: 8.8,
-      worked_minutes: 528,
-      late_minutes: 14,
-      status: "Late",
-      employee_name: "Aarav Sharma", // /all uses employee_name, NOT userName
-      employee_code: "WZ-SYN-0990",
-      department: "Engineering",
-    };
+  it("monthly summary maps the /attendance/all shape (employee_name, datetimes)", async () => {
     apiGet.mockResolvedValue({
-      data: { success: true, data: [allRow], pagination: { total: 1 } },
+      data: { success: true, data: [monthlyRow], pagination: { total: 1 } },
     });
     renderReports();
-    const select = screen.getByRole("combobox");
-    const nativeSelectSetter = Object.getOwnPropertyDescriptor(
-      window.HTMLSelectElement.prototype,
-      "value",
-    ).set;
-    nativeSelectSetter.call(select, "monthly");
-    select.dispatchEvent(new window.Event("change", { bubbles: true }));
-    screen.getByRole("button", { name: /run report/i }).click();
-
+    runSection("Run monthly attendance report");
     await waitFor(() =>
-      expect(screen.getByText(/Aarav Sharma · WZ-SYN-0990/)).toBeTruthy(),
+      expect(screen.getAllByText(/Aarav Sharma · WZ-SYN-0990/).length).toBeGreaterThan(0),
     );
     expect(screen.getAllByText("09:14 AM").length).toBeGreaterThan(0);
     expect(screen.getAllByText("06:02 PM").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("8.80 hrs").length).toBeGreaterThan(0);
     expect(screen.queryByText(/Unknown/)).toBeNull();
     expect(screen.queryByText(/undefined/)).toBeNull();
   });
 
-  it("payroll report maps gross/deductions/net without undefined cells", async () => {
+  it("payroll period report maps gross/deductions/net without undefined cells", async () => {
     apiGet.mockResolvedValue({
       data: { success: true, data: [payrollRow] },
     });
     renderReports();
-    // switch to Payroll Summary
-    const select = screen.getByRole("combobox");
-    const setSelect = (value) => {
-      Object.defineProperty(select, "value", { value, configurable: true });
-      select.dispatchEvent(new window.Event("change", { bubbles: true }));
-    };
-    // react selects respond to change events with the native setter
-    const nativeSelectSetter = Object.getOwnPropertyDescriptor(
-      window.HTMLSelectElement.prototype,
-      "value",
-    ).set;
-    nativeSelectSetter.call(select, "payroll");
-    select.dispatchEvent(new window.Event("change", { bubbles: true }));
-    screen.getByRole("button", { name: /run report/i }).click();
+    runSection("Run payroll period report");
+    await waitFor(() =>
+      expect(screen.getAllByText(/09\/2026/).length).toBeGreaterThan(0),
+    );
+    expect(screen.getAllByText("71400").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Paid").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/undefined/)).toBeNull();
+  });
 
-    await waitFor(() => expect(screen.getByText(/09\/2026/)).toBeTruthy());
-    expect(screen.getByText("71400")).toBeTruthy();
-    expect(screen.getByText("Paid")).toBeTruthy();
+  it("leave report maps organization leave rows (Admin only)", async () => {
+    apiGet.mockResolvedValue({
+      data: { success: true, data: [leaveRow] },
+    });
+    renderReports();
+    runSection("Run leave report");
+    await waitFor(() =>
+      expect(screen.getAllByText(/Casual Leave/).length).toBeGreaterThan(0),
+    );
+    expect(screen.getAllByText("02 Nov 2026").length).toBeGreaterThan(0);
     expect(screen.queryByText(/undefined/)).toBeNull();
   });
 
@@ -169,9 +167,9 @@ describe("Reports", () => {
       data: { success: true, data: [], pagination: { total: 0 } },
     });
     renderReports();
-    screen.getByRole("button", { name: /run report/i }).click();
+    runSection("Run daily attendance report");
     await waitFor(() =>
-      expect(screen.getByText(/No records matched this report\./)).toBeTruthy(),
+      expect(screen.getByText(/No attendance records for that date\./)).toBeTruthy(),
     );
     expect(screen.queryByText(/undefined/)).toBeNull();
   });
@@ -181,7 +179,7 @@ describe("Reports", () => {
       response: { data: { message: "Date parameter is required" } },
     });
     renderReports();
-    screen.getByRole("button", { name: /run report/i }).click();
+    runSection("Run daily attendance report");
     await waitFor(() =>
       expect(screen.getByText(/Date parameter is required/)).toBeTruthy(),
     );

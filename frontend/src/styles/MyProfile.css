@@ -1395,3 +1395,14 @@ select.info-input option {
   font-weight: 600;
   color: #555;
 }
+
+/* Shell integration: profile page renders inside dashboard-main, so drop the
+   standalone full-viewport sizing */
+.dashboard-layout .profile-container {
+  min-height: auto;
+  padding: 28px 32px 40px;
+}
+
+.dashboard-layout .loading {
+  min-height: 40vh;
+}
